@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from "react";
+import React, {useState, useEffect, useCallback, useRef} from "react";
 import {
   View,
   TextInput,
@@ -23,6 +23,11 @@ export default function Index() {
     center: [number, number];
     name?: string;
   }>(null);
+  const coordinateRef = useRef<[number, number] | null>(null);
+
+  useEffect(() => {
+    coordinateRef.current = coordinate;
+  }, [coordinate]);
 
   const debounce = (func: Function, delay: number) => {
     let timeoutId: any;
@@ -49,8 +54,14 @@ export default function Index() {
         userLocation.coords.longitude,
         userLocation.coords.latitude,
       ]);
+      console.log("Set location(after fetch location): ", coordinate);
+      console.log("Set location: ", userLocation);
     })();
   }, []);
+
+  useEffect(() => {
+      console.log("Coordinate changed:", coordinate);
+  }, [coordinate]);
 
   const fetchSuggestions = async (text: string) => {
     console.log("Fetching Suggestions: ", text);
@@ -69,7 +80,7 @@ export default function Index() {
           autocomplete: true,
           types: ['poi', 'address', 'place', 'locality', 'poi.landmark'],
           limit: 10,
-          proximity: coordinate,
+          proximity: coordinateRef.current,
         })
         .send();
 
@@ -86,6 +97,7 @@ export default function Index() {
 
   const handleSuggestionPress = (center: [number, number], name: string) => {
     setCoordinate(center);
+    console.log("Set location(handleSuggestionPress): ", coordinate);
     setQuery(name);
     setSuggestions([]);
     setSelectedPlace({ center, name });
@@ -95,6 +107,7 @@ export default function Index() {
     const coords = event.geometry.coordinates as [number, number];
     setSelectedPlace({ center: coords });
     setCoordinate(coords);
+    console.log("Set location(handleMapPress): ", coordinate);
     setSuggestions([]);
   }
 
