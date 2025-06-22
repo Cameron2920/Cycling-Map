@@ -67,7 +67,8 @@ export default function Index() {
         .forwardGeocode({
           query: text,
           autocomplete: true,
-          limit: 5,
+          types: ['poi', 'address', 'place', 'locality', 'poi.landmark'],
+          limit: 10,
           proximity: coordinate,
         })
         .send();
@@ -125,15 +126,25 @@ export default function Index() {
       </MapboxGL.MapView>
 
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search location"
-          value={query}
-          onChangeText={(text) => {
-            setQuery(text);
-            debouncedFetchSuggestions(text);
-          }}
-        />
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search location"
+            value={query}
+            onChangeText={(text) => {
+              setQuery(text);
+              debouncedFetchSuggestions(text);
+            }}
+          />
+          {query.length > 0 && (
+            <TouchableOpacity onPress={() => {
+              setQuery('');
+              setSuggestions([]);
+            }}>
+              <Text style={styles.clearButton}>×</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         {suggestions.length > 0 && (
           <View style={styles.dropdown}>
             <FlatList
@@ -178,15 +189,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     zIndex: 1000, // Ensure the search bar is above the map
   },
-  searchInput: {
-    height: 40,
-    width: "100%",
-    paddingHorizontal: 10,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: 5,
-    marginBottom: 5,
-  },
   dropdown: {
     backgroundColor: "white",
     borderRadius: 5,
@@ -212,5 +214,25 @@ const styles = StyleSheet.create({
     backgroundColor: "red",
     borderColor: "white",
     borderWidth: 2,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 5,
+    marginBottom: 5,
+    paddingHorizontal: 10,
+    backgroundColor: "#fff",
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+  },
+  clearButton: {
+    fontSize: 18,
+    color: "#888",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
 });
