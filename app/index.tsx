@@ -19,6 +19,10 @@ export default function Index() {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [coordinate, setCoordinate] = useState<null | [number, number]>(null);
+  const [selectedPlace, setSelectedPlace] = useState<null | {
+    center: [number, number];
+    name?: string;
+  }>(null);
 
   const debounce = (func: Function, delay: number) => {
     let timeoutId: any;
@@ -83,7 +87,15 @@ export default function Index() {
     setCoordinate(center);
     setQuery(name);
     setSuggestions([]);
+    setSelectedPlace({ center, name });
   };
+
+  const handleMapPress = (event) => {
+    const coords = event.geometry.coordinates as [number, number];
+    setSelectedPlace({ center: coords });
+    setCoordinate(coords);
+    setSuggestions([]);
+  }
 
   if (!coordinate) {
     return (
@@ -95,9 +107,21 @@ export default function Index() {
 
   return (
     <View style={{ flex: 1 }}>
-      <MapboxGL.MapView style={{ flex: 1 }}>
+      <MapboxGL.MapView style={{ flex: 1 }}
+                        onPress={(event) => handleMapPress(event)}>
         <MapboxGL.Camera zoomLevel={13} centerCoordinate={coordinate} />
         <MapboxGL.UserLocation visible={true} />
+        {selectedPlace && (
+          <MapboxGL.PointAnnotation
+            id="selectedPlace"
+            coordinate={selectedPlace.center}
+          >
+            <View style={styles.markerContainer}>
+              <View style={styles.marker} />
+            </View>
+            <MapboxGL.Callout title={selectedPlace.name} />
+          </MapboxGL.PointAnnotation>
+        )}
       </MapboxGL.MapView>
 
       <View style={styles.searchContainer}>
@@ -174,5 +198,19 @@ const styles = StyleSheet.create({
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
+  },
+  markerContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 30,
+    height: 30,
+  },
+  marker: {
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    backgroundColor: "red",
+    borderColor: "white",
+    borderWidth: 2,
   },
 });
