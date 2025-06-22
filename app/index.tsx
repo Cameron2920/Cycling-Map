@@ -18,7 +18,7 @@ MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 export default function Index() {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
-  const [coordinate, setCoordinate] = useState<null | [number, number]>(null);
+  const [currentCoordinate, setCurrentCoordinate] = useState<null | [number, number]>(null);
   const [selectedPlace, setSelectedPlace] = useState<null | {
     center: [number, number];
     name?: string;
@@ -26,8 +26,8 @@ export default function Index() {
   const coordinateRef = useRef<[number, number] | null>(null);
 
   useEffect(() => {
-    coordinateRef.current = coordinate;
-  }, [coordinate]);
+    coordinateRef.current = currentCoordinate;
+  }, [currentCoordinate]);
 
   const debounce = (func: Function, delay: number) => {
     let timeoutId: any;
@@ -50,18 +50,18 @@ export default function Index() {
       }
 
       const userLocation = await Location.getCurrentPositionAsync({});
-      setCoordinate([
+      setCurrentCoordinate([
         userLocation.coords.longitude,
         userLocation.coords.latitude,
       ]);
-      console.log("Set location(after fetch location): ", coordinate);
+      console.log("Set location(after fetch location): ", currentCoordinate);
       console.log("Set location: ", userLocation);
     })();
   }, []);
 
   useEffect(() => {
-      console.log("Coordinate changed:", coordinate);
-  }, [coordinate]);
+      console.log("Coordinate changed:", currentCoordinate);
+  }, [currentCoordinate]);
 
   const fetchSuggestions = async (text: string) => {
     console.log("Fetching Suggestions: ", text);
@@ -73,7 +73,7 @@ export default function Index() {
 
     try {
       const client = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
-      console.log("coordinate: ", coordinate);
+      console.log("coordinate: ", currentCoordinate);
       const response = await client
         .forwardGeocode({
           query: text,
@@ -96,8 +96,6 @@ export default function Index() {
   const debouncedFetchSuggestions = useCallback(debounce(fetchSuggestions, 300), []);
 
   const handleSuggestionPress = (center: [number, number], name: string) => {
-    setCoordinate(center);
-    console.log("Set location(handleSuggestionPress): ", coordinate);
     setQuery(name);
     setSuggestions([]);
     setSelectedPlace({ center, name });
@@ -106,12 +104,10 @@ export default function Index() {
   const handleMapPress = (event) => {
     const coords = event.geometry.coordinates as [number, number];
     setSelectedPlace({ center: coords });
-    setCoordinate(coords);
-    console.log("Set location(handleMapPress): ", coordinate);
     setSuggestions([]);
   }
 
-  if (!coordinate) {
+  if (!currentCoordinate) {
     return (
       <View style={styles.loadingContainer}>
         <Text>Loading map...</Text>
@@ -123,7 +119,7 @@ export default function Index() {
     <View style={{ flex: 1 }}>
       <MapboxGL.MapView style={{ flex: 1 }}
                         onPress={(event) => handleMapPress(event)}>
-        <MapboxGL.Camera zoomLevel={13} centerCoordinate={coordinate} />
+        <MapboxGL.Camera zoomLevel={13} centerCoordinate={selectedPlace?.center ? selectedPlace.center : currentCoordinate} />
         <MapboxGL.UserLocation visible={true} />
         {selectedPlace && (
           <MapboxGL.PointAnnotation
