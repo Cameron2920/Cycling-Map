@@ -11,6 +11,7 @@ import {
 import MapboxGL from "@rnmapbox/maps";
 import * as Location from "expo-location";
 import { MAPBOX_ACCESS_TOKEN } from '@env';
+import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
@@ -48,22 +49,28 @@ export default function Index() {
   }, []);
 
   const fetchSuggestions = async (text: string) => {
+    console.log("Fetching Suggestions: ", text);
+
     if (!text) {
       setSuggestions([]);
       return;
     }
 
     try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-          text
-        )}.json?access_token=${MAPBOX_ACCESS_TOKEN}`
-      );
-      const data = await response.json();
-      console.log("Response:", data);
+      const client = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
+      console.log("coordinate: ", coordinate);
+      const response = await client
+        .forwardGeocode({
+          query: text,
+          autocomplete: true,
+          limit: 5,
+          proximity: coordinate,
+        })
+        .send();
 
-      if (data.features) {
-        setSuggestions(data.features);
+      if (response.body.features) {
+        console.log("Geocode response: ", response.body.features);
+        setSuggestions(response.body.features);
       }
     } catch (error) {
       console.error("Failed to fetch suggestions:", error);
@@ -161,7 +168,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingVertical: 5,
     width: "100%",
-    maxHeight: 150, // Limit the height of the suggestion list
+    maxHeight: 150,
   },
   suggestionItem: {
     padding: 10,
