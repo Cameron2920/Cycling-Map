@@ -30,6 +30,9 @@ export default function Index() {
   const directionsClient = mbxDirections({ accessToken: MAPBOX_ACCESS_TOKEN });
   const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
   const insets = useSafeAreaInsets();
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [steps, setSteps] = useState<string[]>([]);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   useEffect(() => {
     coordinateRef.current = currentCoordinate;
@@ -66,7 +69,7 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
-      console.log("Coordinate changed:", currentCoordinate);
+    console.log("Coordinate changed:", currentCoordinate);
   }, [currentCoordinate]);
 
   const fetchSuggestions = async (text: string) => {
@@ -98,6 +101,10 @@ export default function Index() {
     }
   };
 
+  useEffect(() => {
+    setRoute();
+  }, [selectedPlace]);
+
   const debouncedFetchSuggestions = useCallback(debounce(fetchSuggestions, 300), []);
 
   const handleSuggestionPress = (center: [number, number], name: string) => {
@@ -112,7 +119,7 @@ export default function Index() {
     setSuggestions([]);
   }
 
-  const handleRoutePress = async () => {
+  const setRoute = async () => {
     if (!currentCoordinate || !selectedPlace){
       return;
     }
@@ -122,6 +129,7 @@ export default function Index() {
         .getDirections({
           profile: 'cycling',
           geometries: 'geojson',
+          steps: true,
           waypoints: [
             {
               coordinates: currentCoordinate,
@@ -135,12 +143,17 @@ export default function Index() {
 
       const route = response.body.routes[0];
       const geometry = route.geometry.coordinates;
+      const allSteps = route.legs.flatMap((leg) =>
+        leg.steps.map((step) => step.maneuver.instruction)
+      );
       setRouteCoordinates(geometry);
+      setSteps(allSteps);
+      console.log("Geocode response: ", route.legs);
     } catch (error) {
       console.error("Failed to fetch route:", error);
       Alert.alert("Error", "Could not fetch route");
     }
-  };
+  }
 
 
   if (!currentCoordinate) {
@@ -149,6 +162,12 @@ export default function Index() {
         <Text>Loading map...</Text>
       </View>
     );
+  }
+
+  const handleStartRoutePress = () => {
+    setIsNavigating(true);
+    setCurrentStepIndex(0);
+    console.log("start route:", steps);
   }
 
   return (
@@ -229,11 +248,21 @@ export default function Index() {
           </View>
         )}
       </View>
-      {selectedPlace && (
+      {!isNavigating && selectedPlace && (
         <View style={{ paddingBottom: insets.bottom + 10 }}>
-        <TouchableOpacity style={styles.routeButton} onPress={handleRoutePress}>
-          <Text style={styles.routeButtonText}>Show Route</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.routeButton} onPress={handleStartRoutePress}>
+            <Text style={styles.routeButtonText}>Start</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {isNavigating && (
+        <View style={{ paddingBottom: insets.bottom + 10 }}>
+          {currentStepIndex < steps.length && (
+            <Text style={styles.instructionText}>{steps[currentStepIndex]}</Text>
+          )}
+          <TouchableOpacity style={styles.routeButton} onPress={() => setIsNavigating(false)}>
+            <Text style={styles.routeButtonText}>Stop</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -320,6 +349,22 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
     textAlign: "center",
+  },
+  instructionBox: {
+    position: 'absolute',
+    bottom: 100,
+    left: 10,
+    right: 10,
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 10,
+    elevation: 5,
+  },
+  instructionText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
   },
 });
 
