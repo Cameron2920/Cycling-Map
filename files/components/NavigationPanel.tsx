@@ -37,7 +37,7 @@ export default function NavigationPanel({
           {currentStepIndex < steps.length && (
             <View style={styles.instructionBox}>
               <Text style={styles.instructionText}>
-                {steps[currentStepIndex]}
+                {steps[currentStepIndex]?.maneuver?.instruction}
               </Text>
             </View>
           )}

@@ -8,6 +8,7 @@ type Props = {
   selectedPlace: { center: [number, number]; name?: string } | null;
   routeCoordinates: Array<[number, number]>;
   onMapPress: (event: any) => void;
+  mockLocation: boolean;
 };
 
 export default function MapViewComponent({
@@ -15,13 +16,24 @@ export default function MapViewComponent({
                                            selectedPlace,
                                            routeCoordinates,
                                            onMapPress,
+                                           mockLocation,
                                          }: Props) {
   const cameraCenter = selectedPlace?.center ?? currentCoordinate;
 
   return (
     <MapboxGL.MapView style={StyleSheet.absoluteFill} onPress={onMapPress}>
       <MapboxGL.Camera zoomLevel={13} centerCoordinate={cameraCenter} />
-      <MapboxGL.UserLocation visible={true} />
+      <MapboxGL.UserLocation visible={!mockLocation} />
+      {mockLocation && (
+        <MapboxGL.PointAnnotation
+          id="mock-user"
+          coordinate={currentCoordinate}
+        >
+          <View style={styles.markerContainer}>
+            <View style={styles.userMarker} />
+          </View>
+        </MapboxGL.PointAnnotation>
+      )}
 
       {selectedPlace && (
         <MapboxGL.PointAnnotation
@@ -73,6 +85,14 @@ const styles = StyleSheet.create({
     height: 15,
     borderRadius: 7.5,
     backgroundColor: "red",
+    borderColor: "white",
+    borderWidth: 2,
+  },
+  userMarker: {
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    backgroundColor: "blue",
     borderColor: "white",
     borderWidth: 2,
   },

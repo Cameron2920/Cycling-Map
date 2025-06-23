@@ -24,5 +24,5 @@ export default function useCurrentLocation() {
     })();
   }, []);
 
-  return location;
+  return [location, setLocation];
 }
