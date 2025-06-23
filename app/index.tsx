@@ -12,6 +12,8 @@ import MapboxGL from "@rnmapbox/maps";
 import * as Location from "expo-location";
 import { MAPBOX_ACCESS_TOKEN } from '@env';
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
+import mbxDirections from '@mapbox/mapbox-sdk/services/directions';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
@@ -24,6 +26,10 @@ export default function Index() {
     name?: string;
   }>(null);
   const coordinateRef = useRef<[number, number] | null>(null);
+  const [routeCoordinates, setRouteCoordinates] = useState<Array<[number, number]>>([]);
+  const directionsClient = mbxDirections({ accessToken: MAPBOX_ACCESS_TOKEN });
+  const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     coordinateRef.current = currentCoordinate;
@@ -72,9 +78,8 @@ export default function Index() {
     }
 
     try {
-      const client = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
       console.log("coordinate: ", currentCoordinate);
-      const response = await client
+      const response = await geocodingClient
         .forwardGeocode({
           query: text,
           autocomplete: true,
@@ -107,6 +112,37 @@ export default function Index() {
     setSuggestions([]);
   }
 
+  const handleRoutePress = async () => {
+    if (!currentCoordinate || !selectedPlace){
+      return;
+    }
+
+    try {
+      const response = await directionsClient
+        .getDirections({
+          profile: 'cycling',
+          geometries: 'geojson',
+          waypoints: [
+            {
+              coordinates: currentCoordinate,
+            },
+            {
+              coordinates: selectedPlace.center,
+            },
+          ],
+        })
+        .send();
+
+      const route = response.body.routes[0];
+      const geometry = route.geometry.coordinates;
+      setRouteCoordinates(geometry);
+    } catch (error) {
+      console.error("Failed to fetch route:", error);
+      Alert.alert("Error", "Could not fetch route");
+    }
+  };
+
+
   if (!currentCoordinate) {
     return (
       <View style={styles.loadingContainer}>
@@ -131,6 +167,28 @@ export default function Index() {
             </View>
             <MapboxGL.Callout title={selectedPlace.name} />
           </MapboxGL.PointAnnotation>
+        )}
+        {routeCoordinates.length > 0 && (
+          <MapboxGL.ShapeSource
+            id="routeSource"
+            shape={{
+              type: "Feature",
+              geometry: {
+                type: "LineString",
+                coordinates: routeCoordinates,
+              },
+            }}
+          >
+            <MapboxGL.LineLayer
+              id="routeLine"
+              style={{
+                lineColor: "#007AFF",
+                lineWidth: 4,
+                lineCap: "round",
+                lineJoin: "round",
+              }}
+            />
+          </MapboxGL.ShapeSource>
         )}
       </MapboxGL.MapView>
 
@@ -171,6 +229,13 @@ export default function Index() {
           </View>
         )}
       </View>
+      {selectedPlace && (
+        <View style={{ paddingBottom: insets.bottom + 10 }}>
+        <TouchableOpacity style={styles.routeButton} onPress={handleRoutePress}>
+          <Text style={styles.routeButtonText}>Show Route</Text>
+        </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -244,4 +309,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
+  routeButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  routeButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    textAlign: "center",
+  },
 });
+
