@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   Text,
-  TouchableOpacity,
   Alert,
 } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
@@ -12,6 +11,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SearchBar from "@/files/components/SearchBar";
 import useCurrentLocation from "@/files/hooks/UseCurrentLocation";
 import {directionsClient, geocodingClient} from "@/files/lib/MapBox";
+import MapViewComponent from "@/files/components/MapView";
+import NavigationPanel from "@/files/components/NavigationPanel";
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
@@ -32,10 +33,6 @@ export default function Index() {
 
   useEffect(() => {
     coordinateRef.current = currentCoordinate;
-  }, [currentCoordinate]);
-
-  useEffect(() => {
-    console.log("Coordinate changed:", currentCoordinate);
   }, [currentCoordinate]);
 
   const fetchSuggestions = async (text: string) => {
@@ -136,45 +133,12 @@ export default function Index() {
 
   return (
     <View style={{ flex: 1 }}>
-      <MapboxGL.MapView style={{ flex: 1 }}
-                        onPress={(event) => handleMapPress(event)}>
-        <MapboxGL.Camera zoomLevel={13} centerCoordinate={selectedPlace?.center ? selectedPlace.center : currentCoordinate} />
-        <MapboxGL.UserLocation visible={true} />
-        {selectedPlace && (
-          <MapboxGL.PointAnnotation
-            id="selectedPlace"
-            coordinate={selectedPlace.center}
-          >
-            <View style={styles.markerContainer}>
-              <View style={styles.marker} />
-            </View>
-            <MapboxGL.Callout title={selectedPlace.name} />
-          </MapboxGL.PointAnnotation>
-        )}
-        {routeCoordinates.length > 0 && (
-          <MapboxGL.ShapeSource
-            id="routeSource"
-            shape={{
-              type: "Feature",
-              geometry: {
-                type: "LineString",
-                coordinates: routeCoordinates,
-              },
-            }}
-          >
-            <MapboxGL.LineLayer
-              id="routeLine"
-              style={{
-                lineColor: "#007AFF",
-                lineWidth: 4,
-                lineCap: "round",
-                lineJoin: "round",
-              }}
-            />
-          </MapboxGL.ShapeSource>
-        )}
-      </MapboxGL.MapView>
-
+      <MapViewComponent
+        currentCoordinate={currentCoordinate}
+        selectedPlace={selectedPlace}
+        routeCoordinates={routeCoordinates}
+        onMapPress={handleMapPress}
+      />
       <SearchBar
         query={query}
         setQuery={setQuery}
@@ -183,23 +147,19 @@ export default function Index() {
         fetchSuggestions={fetchSuggestions}
         onSuggestionSelect={handleSuggestionPress}
       />
-      {!isNavigating && selectedPlace && (
-        <View style={{ paddingBottom: insets.bottom + 10 }}>
-          <TouchableOpacity style={styles.routeButton} onPress={handleStartRoutePress}>
-            <Text style={styles.routeButtonText}>Start</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {isNavigating && (
-        <View style={{ paddingBottom: insets.bottom + 10 }}>
-          {currentStepIndex < steps.length && (
-            <Text style={styles.instructionText}>{steps[currentStepIndex]}</Text>
-          )}
-          <TouchableOpacity style={styles.routeButton} onPress={() => setIsNavigating(false)}>
-            <Text style={styles.routeButtonText}>Stop</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <NavigationPanel
+        selectedPlace={selectedPlace}
+        isNavigating={isNavigating}
+        steps={steps}
+        currentStepIndex={currentStepIndex}
+        onStart={() => {
+          setIsNavigating(true);
+          setCurrentStepIndex(0);
+        }}
+        onStop={() => {
+          setIsNavigating(false);
+        }}
+      />
     </View>
   );
 }
@@ -209,97 +169,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  searchContainer: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    right: 10,
-    flexDirection: "column",
-    alignItems: "center",
-    backgroundColor: "white",
-    padding: 10,
-    borderRadius: 5,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    zIndex: 1000, // Ensure the search bar is above the map
-  },
-  dropdown: {
-    backgroundColor: "white",
-    borderRadius: 5,
-    paddingVertical: 5,
-    width: "100%",
-    maxHeight: 150,
-  },
-  suggestionItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-  },
-  markerContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    width: 30,
-    height: 30,
-  },
-  marker: {
-    width: 15,
-    height: 15,
-    borderRadius: 7.5,
-    backgroundColor: "red",
-    borderColor: "white",
-    borderWidth: 2,
-  },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: 5,
-    marginBottom: 5,
-    paddingHorizontal: 10,
-    backgroundColor: "#fff",
-  },
-  searchInput: {
-    flex: 1,
-    height: 40,
-  },
-  clearButton: {
-    fontSize: 18,
-    color: "#888",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  routeButton: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  routeButtonText: {
-    color: "white",
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  instructionBox: {
-    position: 'absolute',
-    bottom: 100,
-    left: 10,
-    right: 10,
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    elevation: 5,
-  },
-  instructionText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
   },
 });
 
