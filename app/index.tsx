@@ -1,72 +1,38 @@
-import React, {useState, useEffect, useCallback, useRef} from "react";
+import React, {useState, useEffect, useRef} from "react";
 import {
   View,
-  TextInput,
   StyleSheet,
-  FlatList,
   Text,
   TouchableOpacity,
   Alert,
 } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
-import * as Location from "expo-location";
 import { MAPBOX_ACCESS_TOKEN } from '@env';
-import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
-import mbxDirections from '@mapbox/mapbox-sdk/services/directions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import SearchBar from "@/files/components/SearchBar";
+import useCurrentLocation from "@/files/hooks/UseCurrentLocation";
+import {directionsClient, geocodingClient} from "@/files/lib/MapBox";
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
 export default function Index() {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
-  const [currentCoordinate, setCurrentCoordinate] = useState<null | [number, number]>(null);
   const [selectedPlace, setSelectedPlace] = useState<null | {
     center: [number, number];
     name?: string;
   }>(null);
   const coordinateRef = useRef<[number, number] | null>(null);
   const [routeCoordinates, setRouteCoordinates] = useState<Array<[number, number]>>([]);
-  const directionsClient = mbxDirections({ accessToken: MAPBOX_ACCESS_TOKEN });
-  const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
   const insets = useSafeAreaInsets();
   const [isNavigating, setIsNavigating] = useState(false);
   const [steps, setSteps] = useState<string[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const currentCoordinate = useCurrentLocation();
 
   useEffect(() => {
     coordinateRef.current = currentCoordinate;
   }, [currentCoordinate]);
-
-  const debounce = (func: Function, delay: number) => {
-    let timeoutId: any;
-    return (...args: any) => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func(...args), delay);
-    };
-  };
-
-  useEffect(() => {
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Denied",
-          "Location permission is required to use the map."
-        );
-        return;
-      }
-
-      const userLocation = await Location.getCurrentPositionAsync({});
-      setCurrentCoordinate([
-        userLocation.coords.longitude,
-        userLocation.coords.latitude,
-      ]);
-      console.log("Set location(after fetch location): ", currentCoordinate);
-      console.log("Set location: ", userLocation);
-    })();
-  }, []);
 
   useEffect(() => {
     console.log("Coordinate changed:", currentCoordinate);
@@ -104,8 +70,6 @@ export default function Index() {
   useEffect(() => {
     setRoute();
   }, [selectedPlace]);
-
-  const debouncedFetchSuggestions = useCallback(debounce(fetchSuggestions, 300), []);
 
   const handleSuggestionPress = (center: [number, number], name: string) => {
     setQuery(name);
@@ -211,43 +175,14 @@ export default function Index() {
         )}
       </MapboxGL.MapView>
 
-      <View style={styles.searchContainer}>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search location"
-            value={query}
-            onChangeText={(text) => {
-              setQuery(text);
-              debouncedFetchSuggestions(text);
-            }}
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => {
-              setQuery('');
-              setSuggestions([]);
-            }}>
-              <Text style={styles.clearButton}>×</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        {suggestions.length > 0 && (
-          <View style={styles.dropdown}>
-            <FlatList
-              data={suggestions}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.suggestionItem}
-                  onPress={() => handleSuggestionPress(item.center, item.place_name)}
-                >
-                  <Text>{item.place_name}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        )}
-      </View>
+      <SearchBar
+        query={query}
+        setQuery={setQuery}
+        setSuggestions={setSuggestions}
+        suggestions={suggestions}
+        fetchSuggestions={fetchSuggestions}
+        onSuggestionSelect={handleSuggestionPress}
+      />
       {!isNavigating && selectedPlace && (
         <View style={{ paddingBottom: insets.bottom + 10 }}>
           <TouchableOpacity style={styles.routeButton} onPress={handleStartRoutePress}>
