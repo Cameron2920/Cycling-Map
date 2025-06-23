@@ -15,6 +15,9 @@ import MapViewComponent from "@/files/components/MapView";
 import NavigationPanel from "@/files/components/NavigationPanel";
 import * as Location from "expo-location";
 import { Accuracy } from "expo-location";
+import * as Speech from 'expo-speech';
+import * as Haptics from 'expo-haptics';
+import { Vibration } from 'react-native';
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
@@ -76,6 +79,12 @@ export default function Index() {
     setRoute();
   }, [selectedPlace]);
 
+  useEffect(() => {
+    if (isNavigating && currentStepIndex > 0 && steps[currentStepIndex]) {
+      speakText(steps[currentStepIndex].maneuver?.instruction);
+    }
+  }, [currentStepIndex]);
+
   const handleSuggestionPress = (center: [number, number], name: string) => {
     if(!isNavigating) {
       setQuery(name);
@@ -90,6 +99,14 @@ export default function Index() {
       setSelectedPlace({ center: coords });
       setSuggestions([]);
     }
+  }
+
+  const speakText = (text) => {
+    console.log("speaking: ", text);
+    Vibration.vibrate([0, 300, 100, 300, 100, 500]);
+    Speech.speak(text, {
+      volume: 1
+    });
   }
 
   const setRoute = async () => {
@@ -125,10 +142,6 @@ export default function Index() {
       Alert.alert("Error", "Could not fetch route");
     }
   }
-
-  useEffect(() => {
-
-  }, [isNavigating]);
 
   useEffect(() => {
     if(mockLocation){
@@ -212,7 +225,15 @@ export default function Index() {
   const startNavigating = () => {
     setIsNavigating(true);
     setCurrentStepIndex(0);
-    console.log("start route:", steps);
+
+    if (steps[0]) {
+      speakText(steps[0]?.maneuver?.instruction);
+    }
+  }
+
+  const stopNavigating = () => {
+    setIsNavigating(false);
+    Speech.stop();
   }
 
   if (!currentCoordinate) {
@@ -248,9 +269,7 @@ export default function Index() {
         steps={steps}
         currentStepIndex={currentStepIndex}
         onStart={startNavigating}
-        onStop={() => {
-          setIsNavigating(false);
-        }}
+        onStop={stopNavigating}
       />
     </View>
   );
