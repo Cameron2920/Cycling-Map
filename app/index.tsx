@@ -10,13 +10,12 @@ import { MAPBOX_ACCESS_TOKEN } from '@env';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SearchBar from "@/files/components/SearchBar";
 import useCurrentLocation from "@/files/hooks/UseCurrentLocation";
-import {directionsClient, geocodingClient, getDistance} from "@/files/lib/MapBox";
+import {calculatePathDistance, directionsClient, geocodingClient} from "@/files/lib/MapBox";
 import MapViewComponent from "@/files/components/MapView";
 import NavigationPanel from "@/files/components/NavigationPanel";
 import * as Location from "expo-location";
 import { Accuracy } from "expo-location";
 import * as Speech from 'expo-speech';
-import * as Haptics from 'expo-haptics';
 import { Vibration } from 'react-native';
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
@@ -35,6 +34,7 @@ export default function Index() {
   const [steps, setSteps] = useState<any[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [currentCoordinate, setCurrentCoordinate] = useCurrentLocation();
+  const [distanceToNextStep, setDistanceToNextStep] = useState<number | null>(null);
   const mockLocation = true;
 
   useEffect(() => {
@@ -210,8 +210,8 @@ export default function Index() {
     if (!step){
       return;
     }
-    const [stepLon, stepLat] = step.maneuver.location;
-    const distance = getDistance(position, [stepLon, stepLat]);
+    let distance = calculatePathDistance(position, step.maneuver.location, routeCoordinates);
+    setDistanceToNextStep(distance);
     console.log("distance: ", distance)
 
     if (distance < 20) {
@@ -233,6 +233,7 @@ export default function Index() {
 
   const stopNavigating = () => {
     setIsNavigating(false);
+    setDistanceToNextStep(null);
     Speech.stop();
   }
 
@@ -270,6 +271,7 @@ export default function Index() {
         currentStepIndex={currentStepIndex}
         onStart={startNavigating}
         onStop={stopNavigating}
+        distanceToNextStep={distanceToNextStep}
       />
     </View>
   );

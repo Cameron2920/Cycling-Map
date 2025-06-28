@@ -12,10 +12,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 type Props = {
   selectedPlace: { center: [number, number]; name?: string } | null;
   isNavigating: boolean;
-  steps: string[];
+  steps: any[];
   currentStepIndex: number;
   onStart: () => void;
   onStop: () => void;
+  distanceToNextStep: number | null;
 };
 
 export default function NavigationPanel({
@@ -25,6 +26,7 @@ export default function NavigationPanel({
                                           currentStepIndex,
                                           onStart,
                                           onStop,
+                                          distanceToNextStep,
                                         }: Props) {
   const insets = useSafeAreaInsets();
 
@@ -39,6 +41,13 @@ export default function NavigationPanel({
               <Text style={styles.instructionText}>
                 {steps[currentStepIndex]?.maneuver?.instruction}
               </Text>
+              {distanceToNextStep !== null && (
+                <Text style={styles.distanceText}>
+                  {distanceToNextStep < 1000
+                    ? `${Math.round(distanceToNextStep)} m`
+                    : `${(distanceToNextStep / 1000).toFixed(1)} km`} to next turn
+                </Text>
+              )}
             </View>
           )}
           <TouchableOpacity style={styles.button} onPress={onStop}>
@@ -98,6 +107,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
+    textAlign: "center",
+  },
+  distanceText: {
+    fontSize: 14,
+    color: "#555",
+    marginTop: 5,
     textAlign: "center",
   },
 });
