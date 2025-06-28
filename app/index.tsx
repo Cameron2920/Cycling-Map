@@ -210,6 +210,9 @@ export default function Index() {
     if (!step){
       return;
     }
+    console.log("position: ", position)
+    console.log("step.maneuver.location: ", step.maneuver.location)
+    console.log("routeCoordinates: ", routeCoordinates.flat())
     let distance = calculatePathDistance(position, step.maneuver.location, routeCoordinates);
     setDistanceToNextStep(distance);
     console.log("distance: ", distance)

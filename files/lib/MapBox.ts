@@ -25,28 +25,40 @@ export function haversineDistance(coordinate1: [number, number], coordinate2: [n
   return earthRadius * c;
 }
 
-export function calculatePathDistance(startPosition: [number, number], endPosition: [number, number], routeCoordinates:any[]): number {
+export function calculatePathDistance(
+  startPosition: [number, number],
+  endPosition: [number, number],
+  routeCoordinates: Array<[number, number]>
+): number {
+  if (routeCoordinates.length === 0) return 0;
+
   let closestIndex = 0;
   let minDistance = Infinity;
 
-  for (let routeIndex = 0; routeIndex < routeCoordinates.length; routeIndex++) {
-    const distance = haversineDistance(startPosition, routeCoordinates[routeIndex]);
-
-    if (distance < minDistance) {
-      minDistance = distance;
-      closestIndex = routeIndex;
+  for (let index = 0; index < routeCoordinates.length; index++) {
+    const dist = haversineDistance(startPosition, routeCoordinates[index]);
+    if (dist < minDistance) {
+      minDistance = dist;
+      closestIndex = index;
     }
   }
+  let closestEndIndex = closestIndex;
+  minDistance = Infinity;
+
+  for (let index = closestIndex; index < routeCoordinates.length; index++) {
+    const dist = haversineDistance(endPosition, routeCoordinates[index]);
+    if (dist < minDistance) {
+      minDistance = dist;
+      closestEndIndex = index;
+    }
+  }
+
   let distanceSum = 0;
 
-  for (let routeIndex = closestIndex; routeIndex < routeCoordinates.length - 1; routeIndex++) {
-    const segmentStart = routeCoordinates[routeIndex];
-    const segmentEnd = routeCoordinates[routeIndex + 1];
-    distanceSum += haversineDistance(segmentStart, segmentEnd);
-
-    if (haversineDistance(segmentEnd, endPosition) < 5) {
-      break;
-    }
+  for (let index = closestIndex; index < closestEndIndex; index++) {
+    distanceSum += haversineDistance(routeCoordinates[index], routeCoordinates[index + 1]);
   }
+  distanceSum += haversineDistance(startPosition, routeCoordinates[closestIndex]);
+  distanceSum += haversineDistance(routeCoordinates[closestEndIndex], endPosition);
   return distanceSum;
 }
