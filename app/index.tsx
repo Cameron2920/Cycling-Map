@@ -3,18 +3,14 @@ import {
   View,
   StyleSheet,
   Text,
-  Alert,
 } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
 import { MAPBOX_ACCESS_TOKEN } from '@env';
-import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import SearchBar from "@/files/components/SearchBar";
 import useCurrentLocation from "@/files/hooks/UseCurrentLocation";
 import {
   calculatePathDistance,
-  directionsClient,
-  geocodingClient,
-  haversineDistance,
   isOnStepPath
 } from "@/files/lib/MapBox";
 import MapViewComponent from "@/files/components/MapView";
@@ -22,7 +18,8 @@ import NavigationPanel from "@/files/components/NavigationPanel";
 import * as Location from "expo-location";
 import { Accuracy } from "expo-location";
 import * as Speech from 'expo-speech';
-import { Vibration } from 'react-native';
+import {useDirections} from "@/files/hooks/useDirections";
+import {useGeocoding} from "@/files/hooks/useGeocoding";
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
@@ -40,6 +37,9 @@ export default function Index() {
   const [steps, setSteps] = useState<any[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [currentCoordinate, setCurrentCoordinate] = useCurrentLocation();
+  const { routes, getDirections, isLoadingDirections, setSelectedRoute, selectedRoute } = useDirections();
+  const { searchResults, search, isLoadingGeocoding } = useGeocoding();
+
   const mockLocation = true;
 
   useEffect(() => {
@@ -52,39 +52,11 @@ export default function Index() {
     }
   }, [currentStepIndex, currentCoordinate]);
 
-  const fetchSuggestions = async (text: string) => {
-    console.log("Fetching Suggestions: ", text);
-
-    if (!text) {
-      setSuggestions([]);
-      return;
-    }
-
-    try {
-      console.log("coordinate: ", currentCoordinate);
-      const response = await geocodingClient
-        .forwardGeocode({
-          query: text,
-          autocomplete: true,
-          types: ['poi', 'address', 'place', 'locality', 'poi.landmark'],
-          limit: 10,
-          proximity: coordinateRef.current,
-        })
-        .send();
-
-      if (response.body.features) {
-        console.log("Geocode response: ", response.body.features);
-        setSuggestions(response.body.features);
-      }
-    }
-    catch (error) {
-      console.error("Failed to fetch suggestions:", error);
-    }
-  };
-
   useEffect(() => {
-    setRoute();
-  }, [selectedPlace]);
+    if (!isNavigating && currentCoordinate && selectedPlace) {
+      getDirections(currentCoordinate, selectedPlace.center);
+    }
+  }, [currentCoordinate, selectedPlace]);
 
   const handleSuggestionPress = (center: [number, number], name: string) => {
     if(!isNavigating) {
@@ -103,40 +75,6 @@ export default function Index() {
     }
     else if(mockLocation){
       setCurrentCoordinate(coords);
-    }
-  }
-
-  const setRoute = async () => {
-    if (!currentCoordinate || !selectedPlace){
-      return;
-    }
-
-    try {
-      const response = await directionsClient
-        .getDirections({
-          profile: 'cycling',
-          geometries: 'geojson',
-          steps: true,
-          waypoints: [
-            {
-              coordinates: currentCoordinate,
-            },
-            {
-              coordinates: selectedPlace.center,
-            },
-          ],
-        })
-        .send();
-      const route = response.body.routes[0];
-      const geometry = route.geometry.coordinates;
-      const allSteps = route.legs.flatMap((leg) => leg.steps);
-      setRouteCoordinates(geometry);
-      setSteps(allSteps);
-      console.log("Geocode response: ", route.legs);
-    }
-    catch (error) {
-      console.error("Failed to fetch route:", error);
-      Alert.alert("Error", "Could not fetch route");
     }
   }
 
@@ -207,9 +145,13 @@ export default function Index() {
   };
 
   const startNavigating = () => {
-    setIsNavigating(true);
-    setArrived(false);
-    setCurrentStepIndex(0);
+    if(selectedRoute){
+      setSteps(selectedRoute.steps);
+      setRouteCoordinates(selectedRoute.coordinates);
+      setIsNavigating(true);
+      setArrived(false);
+      setCurrentStepIndex(0);
+    }
   }
 
   const stopNavigating = () => {
@@ -231,7 +173,8 @@ export default function Index() {
         mockLocation={mockLocation}
         currentCoordinate={currentCoordinate}
         selectedPlace={selectedPlace}
-        routeCoordinates={routeCoordinates}
+        routes={routes}
+        selectedRoute={selectedRoute}
         onMapPress={handleMapPress}
       />
       <SafeAreaView
@@ -245,8 +188,8 @@ export default function Index() {
               query={query}
               setQuery={setQuery}
               setSuggestions={setSuggestions}
-              suggestions={suggestions}
-              fetchSuggestions={fetchSuggestions}
+              suggestions={searchResults}
+              fetchSuggestions={(query) => search(query, coordinateRef.current)}
               onSuggestionSelect={handleSuggestionPress}
             />
           </View>

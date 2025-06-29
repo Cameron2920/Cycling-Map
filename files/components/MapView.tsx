@@ -2,11 +2,14 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
+import {Route} from "@/files/hooks/useDirections";
 
 type Props = {
   currentCoordinate: [number, number];
   selectedPlace: { center: [number, number]; name?: string } | null;
   routeCoordinates: Array<[number, number]>;
+  routes: Array<Route>;
+  selectedRoute: Route;
   onMapPress: (event: any) => void;
   mockLocation: boolean;
 };
@@ -14,7 +17,8 @@ type Props = {
 export default function MapViewComponent({
                                            currentCoordinate,
                                            selectedPlace,
-                                           routeCoordinates,
+                                           selectedRoute,
+                                           routes,
                                            onMapPress,
                                            mockLocation,
                                          }: Props) {
@@ -47,28 +51,30 @@ export default function MapViewComponent({
         </MapboxGL.PointAnnotation>
       )}
 
-      {routeCoordinates.length > 0 && (
+      {routes.map((route, index) => (
         <MapboxGL.ShapeSource
-          id="routeSource"
+          key={`route-${index}`}
+          id={`routeSource-${index}`}
           shape={{
             type: "Feature",
             geometry: {
               type: "LineString",
-              coordinates: routeCoordinates,
+              coordinates: route.coordinates,
             },
           }}
         >
           <MapboxGL.LineLayer
-            id="routeLine"
+            id={`routeLine-${index}`}
             style={{
-              lineColor: "#007AFF",
-              lineWidth: 4,
+              lineColor: route === selectedRoute ? "#007AFF" : "#A0A0A0", // main vs alternatives
+              lineWidth: route === selectedRoute ? 5 : 3,
+              lineOpacity: route === selectedRoute ? 1 : 0.6,
               lineCap: "round",
               lineJoin: "round",
             }}
           />
         </MapboxGL.ShapeSource>
-      )}
+      ))}
     </MapboxGL.MapView>
   );
 }
