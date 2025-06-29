@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
 import { MAPBOX_ACCESS_TOKEN } from '@env';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import SearchBar from "@/files/components/SearchBar";
 import useCurrentLocation from "@/files/hooks/UseCurrentLocation";
 import {
@@ -234,27 +234,37 @@ export default function Index() {
         routeCoordinates={routeCoordinates}
         onMapPress={handleMapPress}
       />
-      {!isNavigating && (
-        <SearchBar
-          query={query}
-          setQuery={setQuery}
-          setSuggestions={setSuggestions}
-          suggestions={suggestions}
-          fetchSuggestions={fetchSuggestions}
-          onSuggestionSelect={handleSuggestionPress}
-        />
-      )}
-      <NavigationPanel
-        selectedPlace={selectedPlace}
-        isNavigating={isNavigating}
-        steps={steps}
-        currentStepIndex={currentStepIndex}
-        onStart={startNavigating}
-        onStop={stopNavigating}
-        arrived={arrived}
-        currentCoordinate={currentCoordinate}
-        routeCoordinates={routeCoordinates}
-      />
+      <SafeAreaView
+        edges={["top", "bottom", "left", "right"]}
+        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+        pointerEvents="box-none"
+      >
+        {!isNavigating && (
+          <View style={{ flex: 1, justifyContent: "flex-start" }} pointerEvents="box-none">
+            <SearchBar
+              query={query}
+              setQuery={setQuery}
+              setSuggestions={setSuggestions}
+              suggestions={suggestions}
+              fetchSuggestions={fetchSuggestions}
+              onSuggestionSelect={handleSuggestionPress}
+            />
+          </View>
+        )}
+        <View style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">
+          <NavigationPanel
+            selectedPlace={selectedPlace}
+            isNavigating={isNavigating}
+            steps={steps}
+            currentStepIndex={currentStepIndex}
+            onStart={startNavigating}
+            onStop={stopNavigating}
+            arrived={arrived}
+            currentCoordinate={currentCoordinate}
+            routeCoordinates={routeCoordinates}
+          />
+        </View>
+      </SafeAreaView>
     </View>
   );
 }

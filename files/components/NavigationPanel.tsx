@@ -1,5 +1,5 @@
 // components/NavigationPanel.tsx
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {
   View,
   Text,
@@ -7,9 +7,9 @@ import {
   StyleSheet,
   Platform, Vibration,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Speech from "expo-speech";
 import {calculatePathDistance} from "@/files/lib/MapBox";
+import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 
 type Props = {
   selectedPlace: { center: [number, number]; name?: string } | null;
@@ -34,9 +34,10 @@ export default function NavigationPanel({
                                           currentCoordinate,
                                           routeCoordinates,
                                         }: Props) {
-  const insets = useSafeAreaInsets();
   const [instructions, setInstructions] = useState("");
   const [distanceString, setDistanceString] = useState("");
+  const lastSpokenStepIndexRef = useRef<number | null>(null);
+  const hasSpokenApproachRef = useRef(true);
 
   const speakText = (text: string) => {
     console.log("speaking: ", text);
@@ -52,7 +53,8 @@ export default function NavigationPanel({
 
     if(distance) {
       if(distance < 1000) {
-        newDistanceString = `${Math.round(distance)} m`
+        const roundedDistance = Math.round(distance / 50) * 50;
+        newDistanceString = `${Math.round(roundedDistance)} m`
       }
       else {
         newDistanceString = `${(distance / 1000).toFixed(1)} km`
@@ -62,55 +64,128 @@ export default function NavigationPanel({
   }
 
   useEffect(() => {
-    let nextStep = steps[currentStepIndex + 1];
+    if (!isNavigating || arrived) return;
 
-    if (isNavigating && nextStep) {
-      let distance = calculatePathDistance(currentCoordinate, nextStep.maneuver.location, routeCoordinates);
-      setDistanceString(buildDistanceString(distance));
+    const nextStep = steps[currentStepIndex + 1];
+    if (!nextStep) return;
+
+    const distance = calculatePathDistance(
+      currentCoordinate,
+      nextStep.maneuver.location,
+      routeCoordinates
+    );
+
+    const distanceString = buildDistanceString(distance);
+    setDistanceString(distanceString);
+
+    // Speak when within 200 meters of next maneuver (only once)
+    if (!hasSpokenApproachRef.current && distance < 200) {
+      const approachInstruction = `In ${distanceString}, ${nextStep?.maneuver?.instruction}`;
+      speakText(approachInstruction);
+      hasSpokenApproachRef.current = true;
     }
-  }, [currentCoordinate]);
+  }, [currentCoordinate, isNavigating, arrived, currentStepIndex]);
 
   useEffect(() => {
-    let currentStep = steps[currentStepIndex];
-    let nextStep = steps[currentStepIndex + 1];
+    const currentStep = steps[currentStepIndex];
+    const nextStep = steps[currentStepIndex + 1];
 
-    if (isNavigating && currentStep) {
-      if(arrived){
-        let newInstructions = "You have arrived";
-        setInstructions(newInstructions);
-        speakText(newInstructions);
-        return;
-      }
-      let distance = 0;
+    if (!isNavigating || !currentStep) return;
 
-      if(nextStep) {
-        distance = calculatePathDistance(currentCoordinate, nextStep.maneuver.location, routeCoordinates);
-      }
-      let newInstructions = "";
-      let newDistanceString = buildDistanceString(distance);
+    if (arrived) {
+      const instructions = "You have arrived";
+      setInstructions(instructions);
+      speakText(instructions);
+      return;
+    }
 
-      if(currentStepIndex == 0){
-        newInstructions = `${currentStep?.maneuver?.instruction} \nThen in ${newDistanceString}\n ${nextStep?.maneuver?.instruction}`;
-      }
-      else{
-        newInstructions = `In ${newDistanceString}\n${nextStep?.maneuver?.instruction}`;
-      }
-      setDistanceString(newDistanceString);
-      setInstructions(newInstructions);
-      speakText(newInstructions);
+    let distance = 0;
+    if (nextStep) {
+      distance = calculatePathDistance(
+        currentCoordinate,
+        nextStep.maneuver.location,
+        routeCoordinates
+      );
+    }
+
+    const newDistanceString = buildDistanceString(distance);
+    let newInstructions = "";
+
+    if (currentStepIndex === 0 && nextStep) {
+      newInstructions = `${currentStep?.maneuver?.instruction}\nThen in ${newDistanceString}, ${nextStep?.maneuver?.instruction}`;
+    } else if (nextStep) {
+      newInstructions = `In ${newDistanceString}, ${nextStep?.maneuver?.instruction}`;
+    }
+
+    setInstructions(newInstructions);
+    setDistanceString(newDistanceString);
+    speakText(newInstructions);
+
+    lastSpokenStepIndexRef.current = currentStepIndex;
+
+    if(distance > 500){
+      hasSpokenApproachRef.current = false;
     }
   }, [currentStepIndex, isNavigating, arrived]);
 
+  const getStepIcon = (step: any) => {
+    const modifier = step?.maneuver?.modifier;
+    const type = step?.maneuver?.type;
+
+    switch (modifier) {
+      case "sharp right":
+        return <Ionicons name="arrow-forward-sharp" size={24} color="#007AFF" />;
+      case "slight right":
+        return <Ionicons name="arrow-forward-outline" size={24} color="#007AFF" />;
+      case "right":
+        return <Ionicons name="arrow-forward" size={24} color="#007AFF" />;
+
+      case "sharp left":
+        return <Ionicons name="arrow-back-sharp" size={24} color="#007AFF" />;
+      case "slight left":
+        return <Ionicons name="arrow-back-outline" size={24} color="#007AFF" />;
+      case "left":
+        return <Ionicons name="arrow-back" size={24} color="#007AFF" />;
+
+      case "straight":
+        return <Ionicons name="arrow-up" size={24} color="#007AFF" />;
+
+      default:
+        // fallback based on maneuver type
+        switch (type) {
+          case "arrive":
+            return <FontAwesome5 name="flag-checkered" size={24} color="#28a745" />;
+          case "depart":
+            return <MaterialCommunityIcons name="navigation" size={24} color="#007AFF" />;
+          case "roundabout":
+            return <MaterialCommunityIcons name="rotate-right" size={24} color="#007AFF" />;
+          default:
+            return <Ionicons name="ios-navigate" size={24} color="#007AFF" />;
+        }
+    }
+  };
+
+
   if (!selectedPlace) return null;
 
+  const nextStep = steps[currentStepIndex + 1];
+  console.log(nextStep)
+  const icon = nextStep ? getStepIcon(nextStep) : null;
+
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom + 10 }]}>
+    <View style={[styles.container]}>
       {isNavigating ? (
         <>
           <View style={styles.instructionBox}>
+            {icon && (
+              <View style={styles.iconWrapper}>
+                {icon}
+              </View>
+            )}
             <Text style={styles.instructionText}>
               {instructions}
             </Text>
+            <View style={{ height: 1, backgroundColor: "#EEE", marginVertical: 10 }} />
             <Text style={styles.distanceText}>
               {distanceString}
             </Text>
@@ -133,51 +208,58 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     width: "100%",
-    alignItems: "center",
-    backgroundColor: "transparent",
-  },
-  button: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "white",
-    fontWeight: "bold",
-    textAlign: "center",
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 10,
   },
   instructionBox: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 10,
-    elevation: 5,
-    marginBottom: 10,
-    marginHorizontal: 10,
+    backgroundColor: "#F9F9F9",
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginBottom: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-      },
-    }),
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    alignItems: "center",
   },
   instructionText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#222",
     textAlign: "center",
   },
   distanceText: {
-    fontSize: 14,
-    color: "#555",
-    marginTop: 5,
+    fontSize: 16,
+    color: "#666",
+    marginTop: 8,
     textAlign: "center",
+  },
+  button: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  iconWrapper: {
+    backgroundColor: "#E6F0FF",
+    padding: 12,
+    borderRadius: 50,
+    marginBottom: 10,
   },
 });
