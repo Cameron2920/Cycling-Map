@@ -62,3 +62,70 @@ export function calculatePathDistance(
   distanceSum += haversineDistance(routeCoordinates[closestEndIndex], endPosition);
   return distanceSum;
 }
+
+export function isOnStepPath(
+  userPosition: [number, number],
+  step: any,
+): boolean {
+  const stepPolyline = step.geometry.coordinates;
+  const THRESHOLD_METERS = 20;
+  let minDistance = Infinity;
+
+  for (let polylineIndex = 0; polylineIndex < stepPolyline.length - 1; polylineIndex++) {
+    const a = stepPolyline[polylineIndex];
+    const b = stepPolyline[polylineIndex + 1];
+    const distance = pointToSegmentDistance(userPosition, a, b);
+
+    if (distance < minDistance) {
+      minDistance = distance;
+    }
+  }
+  console.log("isOnStepPath: ", userPosition, stepPolyline, minDistance, minDistance > THRESHOLD_METERS);
+  return minDistance < THRESHOLD_METERS;
+}
+
+function pointToSegmentDistance(
+  p: [number, number],
+  a: [number, number],
+  b: [number, number]
+): number {
+  const toRadians = (deg: number) => deg * (Math.PI / 180);
+
+  const [px, py] = p;
+  const [ax, ay] = a;
+  const [bx, by] = b;
+
+  const A = {
+    x: toRadians(ax),
+    y: toRadians(ay)
+  };
+  const B = {
+    x: toRadians(bx),
+    y: toRadians(by)
+  };
+  const P = {
+    x: toRadians(px),
+    y: toRadians(py)
+  };
+
+  const dx = B.x - A.x;
+  const dy = B.y - A.y;
+
+  if (dx === 0 && dy === 0) {
+    return haversineDistance(p, a); // A and B are the same point
+  }
+
+  // Projection formula
+  const t = ((P.x - A.x) * dx + (P.y - A.y) * dy) / (dx * dx + dy * dy);
+  const tClamped = Math.max(0, Math.min(1, t));
+  const closestPoint = [A.x + tClamped * dx, A.y + tClamped * dy];
+
+  // Convert back from radians to degrees
+  const closestLonLat: [number, number] = [
+    closestPoint[0] * (180 / Math.PI),
+    closestPoint[1] * (180 / Math.PI),
+  ];
+
+  return haversineDistance(p, closestLonLat);
+}
+

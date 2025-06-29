@@ -10,7 +10,13 @@ import { MAPBOX_ACCESS_TOKEN } from '@env';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SearchBar from "@/files/components/SearchBar";
 import useCurrentLocation from "@/files/hooks/UseCurrentLocation";
-import {calculatePathDistance, directionsClient, geocodingClient} from "@/files/lib/MapBox";
+import {
+  calculatePathDistance,
+  directionsClient,
+  geocodingClient,
+  haversineDistance,
+  isOnStepPath
+} from "@/files/lib/MapBox";
 import MapViewComponent from "@/files/components/MapView";
 import NavigationPanel from "@/files/components/NavigationPanel";
 import * as Location from "expo-location";
@@ -28,13 +34,12 @@ export default function Index() {
     name?: string;
   }>(null);
   const coordinateRef = useRef<[number, number] | null>(null);
-  const currentStepIndexRef = useRef<number>(0);
   const [routeCoordinates, setRouteCoordinates] = useState<Array<[number, number]>>([]);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [arrived, setArrived] = useState(false);
   const [steps, setSteps] = useState<any[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [currentCoordinate, setCurrentCoordinate] = useCurrentLocation();
-  const [distanceToNextStep, setDistanceToNextStep] = useState<number | null>(null);
   const mockLocation = true;
 
   useEffect(() => {
@@ -42,8 +47,10 @@ export default function Index() {
   }, [currentCoordinate]);
 
   useEffect(() => {
-    currentStepIndexRef.current = currentStepIndex;
-  }, [currentStepIndex]);
+    if (isNavigating && currentCoordinate) {
+      checkAdvanceStep(currentCoordinate, currentStepIndex);
+    }
+  }, [currentStepIndex, currentCoordinate]);
 
   const fetchSuggestions = async (text: string) => {
     console.log("Fetching Suggestions: ", text);
@@ -79,12 +86,6 @@ export default function Index() {
     setRoute();
   }, [selectedPlace]);
 
-  useEffect(() => {
-    if (isNavigating && currentStepIndex > 0 && steps[currentStepIndex]) {
-      speakText(steps[currentStepIndex].maneuver?.instruction);
-    }
-  }, [currentStepIndex]);
-
   const handleSuggestionPress = (center: [number, number], name: string) => {
     if(!isNavigating) {
       setQuery(name);
@@ -94,19 +95,15 @@ export default function Index() {
   };
 
   const handleMapPress = (event) => {
+    const coords = event.geometry.coordinates as [number, number];
+
     if(!isNavigating){
-      const coords = event.geometry.coordinates as [number, number];
       setSelectedPlace({ center: coords });
       setSuggestions([]);
     }
-  }
-
-  const speakText = (text) => {
-    console.log("speaking: ", text);
-    Vibration.vibrate([0, 300, 100, 300, 100, 500]);
-    Speech.speak(text, {
-      volume: 1
-    });
+    else if(mockLocation){
+      setCurrentCoordinate(coords);
+    }
   }
 
   const setRoute = async () => {
@@ -144,10 +141,7 @@ export default function Index() {
   }
 
   useEffect(() => {
-    if(mockLocation){
-      return mockUserMovement();
-    }
-    else{
+    if(!mockLocation){
       return trackUserMovement();
     }
   }, [isNavigating]);
@@ -168,10 +162,6 @@ export default function Index() {
             location.coords.latitude,
           ];
           setCurrentCoordinate(coords);
-
-          if (isNavigating) {
-            checkAdvanceStep(coords);
-          }
         }
       );
     };
@@ -181,62 +171,49 @@ export default function Index() {
     };
   }
 
-  const mockUserMovement = () => {
-    if (!isNavigating || routeCoordinates.length === 0) return;
-
-    let coordinateIndex = 0;
-
-    const interval = setInterval(() => {
-      if (coordinateIndex < routeCoordinates.length) {
-        const nextCoordinate = routeCoordinates[coordinateIndex];
-        setCurrentCoordinate(nextCoordinate);
-        console.log("Updating location: ", nextCoordinate)
-        checkAdvanceStep(nextCoordinate);
-        coordinateIndex += 1;
-      } else {
-        clearInterval(interval);
-      }
-    }, 3000); // faster to test step detection
-
-    return () => clearInterval(interval);
-  }
-
-  const checkAdvanceStep = (position: [number, number]) => {
-    if (!steps || steps.length === 0 || currentStepIndexRef.current >= steps.length){
+  const checkAdvanceStep = (position: [number, number], currentStepIndex: number) => {
+    if (!steps || steps.length === 0 || currentStepIndex >= steps.length){
       return;
     }
-    const step = steps[currentStepIndexRef.current];
+    const step = steps[currentStepIndex];
+    const nextStep = steps[currentStepIndex + 1];
+    const lastStep = steps[steps.length - 1];
 
     if (!step){
       return;
     }
-    console.log("position: ", position)
-    console.log("step.maneuver.location: ", step.maneuver.location)
-    console.log("routeCoordinates: ", routeCoordinates.flat())
-    let distance = calculatePathDistance(position, step.maneuver.location, routeCoordinates);
-    setDistanceToNextStep(distance);
-    console.log("distance: ", distance)
 
-    if (distance < 20) {
-      setCurrentStepIndex((prev) => {
-        console.log("Updating step index: ", Math.min(prev + 1, steps.length - 1))
-        return Math.min(prev + 1, steps.length - 1);
-      });
+    if(calculatePathDistance(position, lastStep.maneuver.location, routeCoordinates) < 15){
+      setArrived(true);
+      return;
     }
+
+    if(isOnStepPath(position, step)){
+      console.log("Still on current step.")
+      return;
+    }
+
+    if(nextStep){
+      if(isOnStepPath(position, nextStep)){
+        console.log("On next step.")
+        setCurrentStepIndex((prev) => {
+          console.log("Updating step index: ", Math.min(prev + 1, steps.length - 1))
+          return Math.min(prev + 1, steps.length - 1);
+        });
+        return;
+      }
+    }
+    console.log("Off route");
   };
 
   const startNavigating = () => {
     setIsNavigating(true);
+    setArrived(false);
     setCurrentStepIndex(0);
-
-    if (steps[0]) {
-      speakText(steps[0]?.maneuver?.instruction);
-    }
   }
 
   const stopNavigating = () => {
     setIsNavigating(false);
-    setDistanceToNextStep(null);
     Speech.stop();
   }
 
@@ -274,7 +251,9 @@ export default function Index() {
         currentStepIndex={currentStepIndex}
         onStart={startNavigating}
         onStop={stopNavigating}
-        distanceToNextStep={distanceToNextStep}
+        arrived={arrived}
+        currentCoordinate={currentCoordinate}
+        routeCoordinates={routeCoordinates}
       />
     </View>
   );
