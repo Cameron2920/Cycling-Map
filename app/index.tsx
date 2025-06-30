@@ -121,7 +121,7 @@ export default function Index() {
       return;
     }
 
-    if(calculatePathDistance(position, lastStep.maneuver.location, routeCoordinates) < 15){
+    if(calculatePathDistance(position, lastStep.location, routeCoordinates) < 15){
       setArrived(true);
       return;
     }

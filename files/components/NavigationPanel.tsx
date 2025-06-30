@@ -71,7 +71,7 @@ export default function NavigationPanel({
 
     const distance = calculatePathDistance(
       currentCoordinate,
-      nextStep.maneuver.location,
+      nextStep.location,
       routeCoordinates
     );
 
@@ -80,7 +80,7 @@ export default function NavigationPanel({
 
     // Speak when within 200 meters of next maneuver (only once)
     if (!hasSpokenApproachRef.current && distance < 200) {
-      const approachInstruction = `In ${distanceString}, ${nextStep?.maneuver?.instruction}`;
+      const approachInstruction = `In ${distanceString}, ${nextStep?.instruction}`;
       speakText(approachInstruction);
       hasSpokenApproachRef.current = true;
     }
@@ -103,7 +103,7 @@ export default function NavigationPanel({
     if (nextStep) {
       distance = calculatePathDistance(
         currentCoordinate,
-        nextStep.maneuver.location,
+        nextStep.location,
         routeCoordinates
       );
     }
@@ -112,9 +112,9 @@ export default function NavigationPanel({
     let newInstructions = "";
 
     if (currentStepIndex === 0 && nextStep) {
-      newInstructions = `${currentStep?.maneuver?.instruction}\nThen in ${newDistanceString}, ${nextStep?.maneuver?.instruction}`;
+      newInstructions = `${currentStep?.instruction}\nThen in ${newDistanceString}, ${nextStep?.instruction}`;
     } else if (nextStep) {
-      newInstructions = `In ${newDistanceString}, ${nextStep?.maneuver?.instruction}`;
+      newInstructions = `In ${newDistanceString}, ${nextStep?.instruction}`;
     }
 
     setInstructions(newInstructions);
@@ -129,8 +129,8 @@ export default function NavigationPanel({
   }, [currentStepIndex, isNavigating, arrived]);
 
   const getStepIcon = (step: any) => {
-    const modifier = step?.maneuver?.modifier;
-    const type = step?.maneuver?.type;
+    const modifier = step?.modifier;
+    const type = step?.type;
 
     switch (modifier) {
       case "sharp right":
