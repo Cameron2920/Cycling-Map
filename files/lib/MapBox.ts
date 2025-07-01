@@ -5,7 +5,14 @@ import { MAPBOX_ACCESS_TOKEN } from '@env';
 export const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 export const directionsClient = mbxDirections({ accessToken: MAPBOX_ACCESS_TOKEN });
 
-export function haversineDistance(coordinate1: [number, number], coordinate2: [number, number]): number {
+export type LatLng = [number, number];
+
+export type Place = {
+  name: string;
+  center: LatLng;
+};
+
+export function haversineDistance(coordinate1: LatLng, coordinate2: LatLng): number {
   const toRadians = (deg: number) => (deg * Math.PI) / 180;
   const [lon1, lat1] = coordinate1;
   const [lon2, lat2] = coordinate2;
@@ -26,9 +33,9 @@ export function haversineDistance(coordinate1: [number, number], coordinate2: [n
 }
 
 export function calculatePathDistance(
-  startPosition: [number, number],
-  endPosition: [number, number],
-  routeCoordinates: Array<[number, number]>
+  startPosition: LatLng,
+  endPosition: LatLng,
+  routeCoordinates: Array<LatLng>
 ): number {
   if (routeCoordinates.length === 0) return 0;
 
@@ -64,7 +71,7 @@ export function calculatePathDistance(
 }
 
 export function isOnStepPath(
-  userPosition: [number, number],
+  userPosition: LatLng,
   step: any,
 ): boolean {
   const stepPolyline = step.coordinates;
@@ -85,9 +92,9 @@ export function isOnStepPath(
 }
 
 function pointToSegmentDistance(
-  p: [number, number],
-  a: [number, number],
-  b: [number, number]
+  p: LatLng,
+  a: LatLng,
+  b: LatLng
 ): number {
   const toRadians = (deg: number) => deg * (Math.PI / 180);
 
@@ -121,7 +128,7 @@ function pointToSegmentDistance(
   const closestPoint = [A.x + tClamped * dx, A.y + tClamped * dy];
 
   // Convert back from radians to degrees
-  const closestLonLat: [number, number] = [
+  const closestLonLat: LatLng = [
     closestPoint[0] * (180 / Math.PI),
     closestPoint[1] * (180 / Math.PI),
   ];

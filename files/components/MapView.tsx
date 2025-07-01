@@ -3,11 +3,12 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
 import {Route} from "@/files/hooks/useDirections";
+import {LatLng} from "@/files/lib/MapBox";
 
 type Props = {
-  currentCoordinate: [number, number];
-  selectedPlace: { center: [number, number]; name?: string } | null;
-  routeCoordinates: Array<[number, number]>;
+  currentCoordinate: LatLng;
+  selectedPlace: { center: LatLng; name?: string } | null;
+  routeCoordinates: Array<LatLng>;
   routes: Array<Route>;
   selectedRoute: Route;
   onMapPress: (event: any) => void;

@@ -7,11 +7,12 @@ import {
   Text,
   StyleSheet,
 } from "react-native";
+import {LatLng} from "@/files/lib/MapBox";
 
 type Suggestion = {
   id: string;
   place_name: string;
-  center: [number, number];
+  center: LatLng;
 };
 
 type Props = {
@@ -20,7 +21,7 @@ type Props = {
   setSuggestions: (s: Suggestion[]) => void;
   fetchSuggestions: (text: string) => void;
   suggestions: Suggestion[];
-  onSuggestionSelect: (center: [number, number], name: string) => void;
+  onSuggestionSelect: (center: LatLng, name: string) => void;
 };
 
 export default function SearchBar({

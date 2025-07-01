@@ -1,8 +1,7 @@
 // lib/hooks/useDirections.ts
 import {useState} from "react";
-import {directionsClient} from "@/files/lib/MapBox";
+import {directionsClient, LatLng} from "@/files/lib/MapBox";
 
-type LatLng = [number, number];
 
 export type Step = {
   location: LatLng;

@@ -1,9 +1,6 @@
 // lib/hooks/useGeocoding.ts
 import { useState } from "react";
-import {geocodingClient} from "@/files/lib/MapBox";
-
-
-type LatLng = [number, number];
+import {geocodingClient, LatLng} from "@/files/lib/MapBox";
 
 export type GeocodeResult = {
   place_name: string;

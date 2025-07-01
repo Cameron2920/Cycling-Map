@@ -11,7 +11,8 @@ import SearchBar from "@/files/components/SearchBar";
 import useCurrentLocation from "@/files/hooks/UseCurrentLocation";
 import {
   calculatePathDistance,
-  isOnStepPath
+  isOnStepPath,
+  LatLng, Place
 } from "@/files/lib/MapBox";
 import MapViewComponent from "@/files/components/MapView";
 import NavigationPanel from "@/files/components/NavigationPanel";
@@ -26,12 +27,9 @@ MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 export default function Index() {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
-  const [selectedPlace, setSelectedPlace] = useState<null | {
-    center: [number, number];
-    name?: string;
-  }>(null);
-  const coordinateRef = useRef<[number, number] | null>(null);
-  const [routeCoordinates, setRouteCoordinates] = useState<Array<[number, number]>>([]);
+  const [endPlace, setEndPlace] = useState<Place|null>(null);
+  const currentCoordinateRef = useRef<LatLng | null>(null);
+  const [routeCoordinates, setRouteCoordinates] = useState<Array<LatLng>>([]);
   const [isNavigating, setIsNavigating] = useState(false);
   const [arrived, setArrived] = useState(false);
   const [steps, setSteps] = useState<any[]>([]);
@@ -43,7 +41,7 @@ export default function Index() {
   const mockLocation = true;
 
   useEffect(() => {
-    coordinateRef.current = currentCoordinate;
+    currentCoordinateRef.current = currentCoordinate;
   }, [currentCoordinate]);
 
   useEffect(() => {
@@ -53,24 +51,24 @@ export default function Index() {
   }, [currentStepIndex, currentCoordinate]);
 
   useEffect(() => {
-    if (!isNavigating && currentCoordinate && selectedPlace) {
-      getDirections(currentCoordinate, selectedPlace.center);
+    if (!isNavigating && currentCoordinate && endPlace) {
+      getDirections(currentCoordinate, endPlace.center);
     }
-  }, [currentCoordinate, selectedPlace]);
+  }, [currentCoordinate, endPlace]);
 
-  const handleSuggestionPress = (center: [number, number], name: string) => {
+  const handleSuggestionPress = (center: LatLng, name: string) => {
     if(!isNavigating) {
       setQuery(name);
       setSuggestions([]);
-      setSelectedPlace({center, name});
+      setEndPlace({center, name});
     }
   };
 
   const handleMapPress = (event) => {
-    const coords = event.geometry.coordinates as [number, number];
+    const coords = event.geometry.coordinates as LatLng;
 
     if(!isNavigating){
-      setSelectedPlace({ center: coords });
+      setEndPlace({ center: coords });
       setSuggestions([]);
     }
     else if(mockLocation){
@@ -95,7 +93,7 @@ export default function Index() {
           distanceInterval: 1, // or every meter
         },
         (location) => {
-          const coords: [number, number] = [
+          const coords: LatLng = [
             location.coords.longitude,
             location.coords.latitude,
           ];
@@ -109,7 +107,7 @@ export default function Index() {
     };
   }
 
-  const checkAdvanceStep = (position: [number, number], currentStepIndex: number) => {
+  const checkAdvanceStep = (position: LatLng, currentStepIndex: number) => {
     if (!steps || steps.length === 0 || currentStepIndex >= steps.length){
       return;
     }
@@ -172,7 +170,7 @@ export default function Index() {
       <MapViewComponent
         mockLocation={mockLocation}
         currentCoordinate={currentCoordinate}
-        selectedPlace={selectedPlace}
+        selectedPlace={endPlace}
         routes={routes}
         selectedRoute={selectedRoute}
         onMapPress={handleMapPress}
@@ -189,14 +187,14 @@ export default function Index() {
               setQuery={setQuery}
               setSuggestions={setSuggestions}
               suggestions={searchResults}
-              fetchSuggestions={(query) => search(query, coordinateRef.current)}
+              fetchSuggestions={(query) => search(query, currentCoordinateRef.current)}
               onSuggestionSelect={handleSuggestionPress}
             />
           </View>
         )}
         <View style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">
           <NavigationPanel
-            selectedPlace={selectedPlace}
+            selectedPlace={endPlace}
             isNavigating={isNavigating}
             steps={steps}
             currentStepIndex={currentStepIndex}

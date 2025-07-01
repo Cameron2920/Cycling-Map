@@ -8,11 +8,11 @@ import {
   Platform, Vibration,
 } from "react-native";
 import * as Speech from "expo-speech";
-import {calculatePathDistance} from "@/files/lib/MapBox";
+import {calculatePathDistance, Place} from "@/files/lib/MapBox";
 import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 
 type Props = {
-  selectedPlace: { center: [number, number]; name?: string } | null;
+  selectedPlace: Place | null;
   isNavigating: boolean;
   steps: any[];
   currentStepIndex: number;
