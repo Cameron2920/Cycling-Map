@@ -1,14 +1,9 @@
 // lib/hooks/useGeocoding.ts
 import { useState } from "react";
-import {geocodingClient, LatLng} from "@/files/lib/MapBox";
-
-export type GeocodeResult = {
-  place_name: string;
-  center: LatLng;
-};
+import {geocodingClient, LatLng, Place} from "@/files/lib/MapBox";
 
 export function useGeocoding() {
-  const [results, setResults] = useState<GeocodeResult[]>([]);
+  const [results, setResults] = useState<Place[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -19,21 +14,7 @@ export function useGeocoding() {
     setError(null);
 
     try {
-      const response = await geocodingClient
-        .forwardGeocode({
-          query: query,
-          autocomplete: true,
-          types: ['poi', 'address', 'place', 'locality', 'poi.landmark'],
-          limit: 10,
-          proximity: location,
-        })
-        .send();
-      console.log(response.body.features[0]);
-      const parsed = response.body.features.map((feature) => ({
-        place_name: feature.place_name,
-        center: feature.center as LatLng,
-      }));
-      setResults(parsed);
+      setResults(await fetchSearchResults(query, location));
     }
     catch (error: any) {
       setError(error);
@@ -47,5 +28,22 @@ export function useGeocoding() {
     return searchWithMapbox(query, location);
   };
 
-  return { searchResults: results, search, isLoadingGeocoding: loading, geocodingError: error };
+  const fetchSearchResults = async (query: string, location:LatLng):Promise<Place[]> => {
+    console.log("fetchSearchResults 1");
+    const response = await geocodingClient
+      .forwardGeocode({
+        query: query,
+        autocomplete: true,
+        types: ['poi', 'address', 'place', 'locality', 'poi.landmark'],
+        limit: 10,
+        proximity: location,
+      })
+      .send();
+    return response.body.features.map((feature) => ({
+      name: feature.place_name,
+      center: feature.center as LatLng,
+    }));
+  };
+
+  return { searchResults: results, search, isLoadingGeocoding: loading, geocodingError: error, fetchSearchResults };
 }

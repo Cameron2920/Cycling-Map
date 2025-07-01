@@ -21,12 +21,14 @@ import { Accuracy } from "expo-location";
 import * as Speech from 'expo-speech';
 import {useDirections} from "@/files/hooks/useDirections";
 import {useGeocoding} from "@/files/hooks/useGeocoding";
+import StartEndSearch from "@/files/components/StartEndSearch";
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
 export default function Index() {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
+  const [startPlace, setStartPlace] = useState<Place|null>(null);
   const [endPlace, setEndPlace] = useState<Place|null>(null);
   const currentCoordinateRef = useRef<LatLng | null>(null);
   const [routeCoordinates, setRouteCoordinates] = useState<Array<LatLng>>([]);
@@ -36,7 +38,7 @@ export default function Index() {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [currentCoordinate, setCurrentCoordinate] = useCurrentLocation();
   const { routes, getDirections, isLoadingDirections, setSelectedRoute, selectedRoute } = useDirections();
-  const { searchResults, search, isLoadingGeocoding } = useGeocoding();
+  const { searchResults, search, isLoadingGeocoding, fetchSearchResults } = useGeocoding();
 
   const mockLocation = true;
 
@@ -51,16 +53,28 @@ export default function Index() {
   }, [currentStepIndex, currentCoordinate]);
 
   useEffect(() => {
-    if (!isNavigating && currentCoordinate && endPlace) {
-      getDirections(currentCoordinate, endPlace.center);
+    if (!isNavigating && startPlace && endPlace) {
+      getDirections(startPlace.center, endPlace.center);
     }
-  }, [currentCoordinate, endPlace]);
+  }, [startPlace, endPlace]);
 
   const handleSuggestionPress = (center: LatLng, name: string) => {
     if(!isNavigating) {
       setQuery(name);
       setSuggestions([]);
       setEndPlace({center, name});
+    }
+  };
+
+  const handleStartPlaceSelected = (place:Place) => {
+    if(!isNavigating) {
+      setStartPlace(place);
+    }
+  };
+
+  const handleEndPlaceSelected = (place:Place) => {
+    if(!isNavigating) {
+      setEndPlace(place);
     }
   };
 
@@ -182,14 +196,17 @@ export default function Index() {
       >
         {!isNavigating && (
           <View style={{ flex: 1, justifyContent: "flex-start" }} pointerEvents="box-none">
-            <SearchBar
-              query={query}
-              setQuery={setQuery}
-              setSuggestions={setSuggestions}
-              suggestions={searchResults}
-              fetchSuggestions={(query) => search(query, currentCoordinateRef.current)}
-              onSuggestionSelect={handleSuggestionPress}
-            />
+            <StartEndSearch startPlace={startPlace}
+                            endPlace={endPlace}
+                            onSelectStart={handleStartPlaceSelected}
+                            onSelectEnd={handleEndPlaceSelected}
+                            onSwap={() => {
+                              setEndPlace(startPlace);
+                              setStartPlace(endPlace);
+                            }}
+                            onSearch={(query) => fetchSearchResults(query, currentCoordinateRef.current)}>
+
+            </StartEndSearch>
           </View>
         )}
         <View style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">

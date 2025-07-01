@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import * as Location from 'expo-location';
 import {Alert} from "react-native";
+import {LatLng} from "@/files/lib/MapBox";
 
 export default function useCurrentLocation() {
-  const [location, setLocation] = useState<[number, number] | null>(null);
+  const [location, setLocation] = useState<LatLng | null>(null);
 
   useEffect(() => {
     (async () => {

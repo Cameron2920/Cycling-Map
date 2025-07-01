@@ -22,7 +22,7 @@ const GRAPH_HOPPER_API_KEY = process.env.EXPO_PUBLIC_GRAPH_HOPPER_KEY!;
 
 export function useDirections() {
   const [routes, setRoutes] = useState<Route[]>([]);
-  const [selectedRoute, setSelectedRoute] = useState<Route[]>([]);
+  const [selectedRoute, setSelectedRoute] = useState<Route|null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<any>(null);
 
