@@ -44,6 +44,14 @@ export default function Index() {
 
   useEffect(() => {
     currentCoordinateRef.current = currentCoordinate;
+
+    if(!startPlace && currentCoordinate != null){
+      console.log("currentCoordinate", currentCoordinate)
+      setStartPlace({
+        name: "Current Location",
+        center: currentCoordinate
+      })
+    }
   }, [currentCoordinate]);
 
   useEffect(() => {
@@ -54,6 +62,7 @@ export default function Index() {
 
   useEffect(() => {
     if (!isNavigating && startPlace && endPlace) {
+      console.log("getDirections", startPlace, endPlace)
       getDirections(startPlace.center, endPlace.center);
     }
   }, [startPlace, endPlace]);

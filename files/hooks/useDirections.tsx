@@ -61,10 +61,12 @@ export function useDirections() {
         })),
         //   TODO: Will need to parse steps to Step object if plan on using mapbox again
       }));
+      console.log("parsedRoutes", parsedRoutes)
       setRoutes(parsedRoutes);
       setSelectedRoute(parsedRoutes[0]);
     }
     catch (error) {
+      console.error("Error", error);
       setError(error);
     }
     finally {
