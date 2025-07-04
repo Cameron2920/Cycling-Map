@@ -3,11 +3,12 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
 import {Route} from "@/files/hooks/useDirections";
-import {LatLng} from "@/files/lib/MapBox";
+import {LatLng, Place} from "@/files/lib/MapBox";
 
 type Props = {
   currentCoordinate: LatLng;
-  selectedPlace: { center: LatLng; name?: string } | null;
+  endPlace: Place | null;
+  startPlace: Place | null;
   routeCoordinates: Array<LatLng>;
   routes: Array<Route>;
   selectedRoute: Route;
@@ -17,13 +18,14 @@ type Props = {
 
 export default function MapViewComponent({
                                            currentCoordinate,
-                                           selectedPlace,
+                                           startPlace,
+                                           endPlace,
                                            selectedRoute,
                                            routes,
                                            onMapPress,
                                            mockLocation,
                                          }: Props) {
-  const cameraCenter = selectedPlace?.center ?? currentCoordinate;
+  const cameraCenter = endPlace?.center ?? currentCoordinate;
 
   return (
     <MapboxGL.MapView style={StyleSheet.absoluteFill} onPress={onMapPress}>
@@ -40,15 +42,27 @@ export default function MapViewComponent({
         </MapboxGL.PointAnnotation>
       )}
 
-      {selectedPlace && (
+      {endPlace && (
         <MapboxGL.PointAnnotation
           id="selectedPlace"
-          coordinate={selectedPlace.center}
+          coordinate={endPlace.center}
         >
           <View style={styles.markerContainer}>
             <View style={styles.marker} />
           </View>
-          <MapboxGL.Callout title={selectedPlace.name} />
+          <MapboxGL.Callout title={endPlace.name} />
+        </MapboxGL.PointAnnotation>
+      )}
+
+      {startPlace && (
+        <MapboxGL.PointAnnotation
+          id="selectedPlace"
+          coordinate={startPlace.center}
+        >
+          <View style={styles.markerContainer}>
+            <View style={[styles.marker, {backgroundColor: "green"}]} />
+          </View>
+          <MapboxGL.Callout title={startPlace.name} />
         </MapboxGL.PointAnnotation>
       )}
 

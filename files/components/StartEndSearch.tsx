@@ -8,6 +8,8 @@ type Props = {
   endPlace: Place | null;
   onSelectStart: (place: Place) => void;
   onSelectEnd: (place: Place) => void;
+  setPickingFromMap: (value: string) => void;
+  pickingFromMap:string;
   onSwap: () => void;
   onSearch: (query: string) => Promise<Place[]>;
 };
@@ -15,6 +17,8 @@ type Props = {
 export default function StartEndSearch({
                                          startPlace,
                                          endPlace,
+                                         pickingFromMap,
+                                         setPickingFromMap,
                                          onSelectStart,
                                          onSelectEnd,
                                          onSwap,
@@ -65,6 +69,15 @@ export default function StartEndSearch({
     setResults([]);
   };
 
+  const handleChooseOnMap = () => {
+    if (searchMode) {
+      setPickingFromMap(searchMode);
+      setSearchMode(null);
+      setQuery("");
+      setResults([]);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.inputBox} onPress={() => setSearchMode("start")}>
@@ -96,6 +109,11 @@ export default function StartEndSearch({
                 <Text>{item.name}</Text>
               </TouchableOpacity>
             )}
+            ListFooterComponent={
+              <TouchableOpacity style={styles.chooseOnMap} onPress={handleChooseOnMap}>
+                <Text style={styles.chooseOnMapText}>📍 Choose on map</Text>
+              </TouchableOpacity>
+            }
           />
           <TouchableOpacity onPress={() => setSearchMode(null)} style={styles.cancelButton}>
             <Text style={styles.cancelText}>Cancel</Text>
@@ -152,5 +170,16 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     color: "#007AFF",
+  },
+  chooseOnMap: {
+    marginTop: 10,
+    padding: 12,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  chooseOnMapText: {
+    color: "#007AFF",
+    fontWeight: "600",
   },
 });

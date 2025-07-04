@@ -37,6 +37,7 @@ export default function Index() {
   const [steps, setSteps] = useState<any[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [currentCoordinate, setCurrentCoordinate] = useCurrentLocation();
+  const [pickingFromMap, setPickingFromMap] = useState<"start" | "end" | null>("end");
   const { routes, getDirections, isLoadingDirections, setSelectedRoute, selectedRoute } = useDirections();
   const { searchResults, search, isLoadingGeocoding, fetchSearchResults } = useGeocoding();
 
@@ -91,7 +92,12 @@ export default function Index() {
     const coords = event.geometry.coordinates as LatLng;
 
     if(!isNavigating){
-      setEndPlace({ center: coords });
+      if(pickingFromMap == "start"){
+        setStartPlace({ center: coords });
+      }
+      else{
+        setEndPlace({ center: coords });
+      }
       setSuggestions([]);
     }
     else if(mockLocation){
@@ -193,7 +199,8 @@ export default function Index() {
       <MapViewComponent
         mockLocation={mockLocation}
         currentCoordinate={currentCoordinate}
-        selectedPlace={endPlace}
+        startPlace={startPlace}
+        endPlace={endPlace}
         routes={routes}
         selectedRoute={selectedRoute}
         onMapPress={handleMapPress}
@@ -207,6 +214,8 @@ export default function Index() {
           <View style={{ flex: 1, justifyContent: "flex-start" }} pointerEvents="box-none">
             <StartEndSearch startPlace={startPlace}
                             endPlace={endPlace}
+                            pickingFromMap={pickingFromMap}
+                            setPickingFromMap={setPickingFromMap}
                             onSelectStart={handleStartPlaceSelected}
                             onSelectEnd={handleEndPlaceSelected}
                             onSwap={() => {
@@ -216,20 +225,31 @@ export default function Index() {
                             onSearch={(query) => fetchSearchResults(query, currentCoordinateRef.current)}>
 
             </StartEndSearch>
+            {pickingFromMap && (
+              <View style={styles.mapHint}>
+                <Text>
+                  Tap the map to select {pickingFromMap === "start" ? "starting point" : "destination"}
+                </Text>
+              </View>
+            )}
           </View>
         )}
-        <View style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">
-          <NavigationPanel
-            selectedPlace={endPlace}
-            isNavigating={isNavigating}
-            steps={steps}
-            currentStepIndex={currentStepIndex}
-            onStart={startNavigating}
-            onStop={stopNavigating}
-            arrived={arrived}
-            currentCoordinate={currentCoordinate}
-            routeCoordinates={routeCoordinates}
-          />
+        <View style={{ flex: 1, position: "relative" }}>
+
+
+          <View style={{ flex: 1, justifyContent: "flex-end" }} pointerEvents="box-none">
+            <NavigationPanel
+              selectedPlace={endPlace}
+              isNavigating={isNavigating}
+              steps={steps}
+              currentStepIndex={currentStepIndex}
+              onStart={startNavigating}
+              onStop={stopNavigating}
+              arrived={arrived}
+              currentCoordinate={currentCoordinate}
+              routeCoordinates={routeCoordinates}
+            />
+          </View>
         </View>
       </SafeAreaView>
     </View>
@@ -241,6 +261,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  mapHint: {
+    backgroundColor: "#fff",
+    padding: 12,
+    marginHorizontal: 20,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 4,
+    alignItems: "center",
+    zIndex: 1000,
   },
 });
 
