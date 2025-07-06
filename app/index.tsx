@@ -34,6 +34,7 @@ export default function Index() {
   const [routeCoordinates, setRouteCoordinates] = useState<Array<LatLng>>([]);
   const [isNavigating, setIsNavigating] = useState(false);
   const [arrived, setArrived] = useState(false);
+  const [isOnRoute, setIsOnRoute] = useState(true);
   const [steps, setSteps] = useState<any[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [currentCoordinate, setCurrentCoordinate] = useCurrentLocation();
@@ -141,7 +142,6 @@ export default function Index() {
       return;
     }
     const step = steps[currentStepIndex];
-    const nextStep = steps[currentStepIndex + 1];
     const lastStep = steps[steps.length - 1];
 
     if (!step){
@@ -150,25 +150,28 @@ export default function Index() {
 
     if(calculatePathDistance(position, lastStep.location, routeCoordinates) < 15){
       setArrived(true);
+      setIsOnRoute(true);
       return;
     }
 
     if(isOnStepPath(position, step)){
       console.log("Still on current step.")
+      setIsOnRoute(true);
       return;
     }
 
-    if(nextStep){
-      if(isOnStepPath(position, nextStep)){
-        console.log("On next step.")
-        setCurrentStepIndex((prev) => {
-          console.log("Updating step index: ", Math.min(prev + 1, steps.length - 1))
-          return Math.min(prev + 1, steps.length - 1);
-        });
+    for(let stepIndex = currentStepIndex + 1; stepIndex < steps.length; stepIndex++){
+      let futureStep = steps[stepIndex];
+
+      if(isOnStepPath(position, futureStep)){
+        setCurrentStepIndex(stepIndex);
+        setIsOnRoute(true);
+        console.log("On next step.");
         return;
       }
     }
     console.log("Off route");
+    setIsOnRoute(false);
   };
 
   const startNavigating = () => {
@@ -177,6 +180,7 @@ export default function Index() {
       setRouteCoordinates(selectedRoute.coordinates);
       setIsNavigating(true);
       setArrived(false);
+      setIsOnRoute(true);
       setCurrentStepIndex(0);
     }
   }
@@ -246,6 +250,7 @@ export default function Index() {
               onStart={startNavigating}
               onStop={stopNavigating}
               arrived={arrived}
+              isOnRoute={isOnRoute}
               currentCoordinate={currentCoordinate}
             />
           </View>

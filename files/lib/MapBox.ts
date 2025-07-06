@@ -75,7 +75,7 @@ export function isOnStepPath(
   step: any,
 ): boolean {
   const stepPolyline = step.coordinates;
-  const THRESHOLD_METERS = 20;
+  const THRESHOLD_METERS = 30;
   let minDistance = Infinity;
 
   for (let polylineIndex = 0; polylineIndex < stepPolyline.length - 1; polylineIndex++) {

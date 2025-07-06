@@ -19,6 +19,7 @@ type Props = {
   onStart: () => void;
   onStop: () => void;
   arrived: boolean;
+  isOnRoute: boolean;
   currentCoordinate: any;
   route: Route | null;
 };
@@ -30,6 +31,7 @@ export default function NavigationPanel({
                                           onStart,
                                           onStop,
                                           arrived,
+                                          isOnRoute,
                                           currentCoordinate,
                                           route,
                                         }: Props) {
@@ -98,6 +100,12 @@ export default function NavigationPanel({
       speakText(instructions);
       return;
     }
+    else if(!isOnRoute) {
+      const instructions = "You are off route";
+      setInstructions(instructions);
+      speakText(instructions);
+      return;
+    }
 
     let distance = 0;
     if (nextStep) {
@@ -126,7 +134,7 @@ export default function NavigationPanel({
     if(distance > 500){
       hasSpokenApproachRef.current = false;
     }
-  }, [currentStepIndex, isNavigating, arrived]);
+  }, [currentStepIndex, isNavigating, arrived, isOnRoute]);
 
   const getStepIcon = (step: any) => {
     const modifier = step?.modifier;
