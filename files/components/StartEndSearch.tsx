@@ -78,10 +78,22 @@ export default function StartEndSearch({
     }
   };
 
+  const placeLabel = (place:Place|null) => {
+    let returnValue = null;
+
+    if(place?.name){
+      returnValue = place.name;
+    }
+    else if(place?.center){
+      returnValue = `${place.center[0]},${place.center[1]}`;
+    }
+    return returnValue;
+  }
+
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.inputBox} onPress={() => setSearchMode("start")}>
-        <Text style={styles.inputText}>{startPlace?.name || "Choose starting point"}</Text>
+        <Text style={styles.inputText}>{placeLabel(startPlace) || "Choose starting point"}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.swapButton} onPress={onSwap}>
@@ -89,7 +101,7 @@ export default function StartEndSearch({
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.inputBox} onPress={() => setSearchMode("end")}>
-        <Text style={styles.inputText}>{endPlace?.name || "Choose destination"}</Text>
+        <Text style={styles.inputText}>{placeLabel(endPlace) || "Choose destination"}</Text>
       </TouchableOpacity>
 
       <Modal visible={searchMode !== null} animationType="slide">
