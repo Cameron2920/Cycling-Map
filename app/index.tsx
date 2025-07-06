@@ -241,13 +241,12 @@ export default function Index() {
             <NavigationPanel
               selectedPlace={endPlace}
               isNavigating={isNavigating}
-              steps={steps}
+              route={selectedRoute}
               currentStepIndex={currentStepIndex}
               onStart={startNavigating}
               onStop={stopNavigating}
               arrived={arrived}
               currentCoordinate={currentCoordinate}
-              routeCoordinates={routeCoordinates}
             />
           </View>
         </View>

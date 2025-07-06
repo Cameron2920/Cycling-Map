@@ -15,7 +15,8 @@ export type Route = {
   coordinates: LatLng[];
   distance: number; // in meters
   duration: number; // in seconds
-  steps: Array<Step>;
+  elevationGain?: number; // meters
+  steps: Step[];
 };
 
 const GRAPH_HOPPER_API_KEY = process.env.EXPO_PUBLIC_GRAPH_HOPPER_KEY!;
@@ -52,6 +53,7 @@ export function useDirections() {
         coordinates: route.geometry.coordinates,
         distance: route.distance,
         duration: route.duration,
+        elevationGain: route.elevationGain,
         steps: route.legs[0].steps.map((step: any) => ({
           coordinates: step.geometry.coordinates,
           location: step.maneuver.location,

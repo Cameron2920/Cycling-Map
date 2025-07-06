@@ -136,3 +136,11 @@ function pointToSegmentDistance(
   return haversineDistance(p, closestLonLat);
 }
 
+export function formatDistance(m: number) {
+  return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`;
+};
+
+export function formatDuration(s: number) {
+  const min = Math.round(s / 60);
+  return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`;
+};

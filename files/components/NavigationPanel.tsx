@@ -8,31 +8,30 @@ import {
   Platform, Vibration,
 } from "react-native";
 import * as Speech from "expo-speech";
-import {calculatePathDistance, Place} from "@/files/lib/MapBox";
+import {calculatePathDistance, formatDistance, formatDuration, Place} from "@/files/lib/MapBox";
 import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import {Route} from "@/files/hooks/useDirections";
 
 type Props = {
   selectedPlace: Place | null;
   isNavigating: boolean;
-  steps: any[];
   currentStepIndex: number;
   onStart: () => void;
   onStop: () => void;
   arrived: boolean;
   currentCoordinate: any;
-  routeCoordinates: any;
+  route: Route | null;
 };
 
 export default function NavigationPanel({
                                           selectedPlace,
                                           isNavigating,
-                                          steps,
                                           currentStepIndex,
                                           onStart,
                                           onStop,
                                           arrived,
                                           currentCoordinate,
-                                          routeCoordinates,
+                                          route,
                                         }: Props) {
   const [instructions, setInstructions] = useState("");
   const [distanceString, setDistanceString] = useState("");
@@ -46,7 +45,6 @@ export default function NavigationPanel({
       volume: 1
     });
   }
-  console.log("nav panel currentStepIndex: ", currentStepIndex)
 
   const buildDistanceString = (distance:number) => {
     let newDistanceString = "";
@@ -64,15 +62,15 @@ export default function NavigationPanel({
   }
 
   useEffect(() => {
-    if (!isNavigating || arrived) return;
+    if (!isNavigating || arrived || !route) return;
 
-    const nextStep = steps[currentStepIndex + 1];
+    const nextStep = route.steps[currentStepIndex + 1];
     if (!nextStep) return;
 
     const distance = calculatePathDistance(
       currentCoordinate,
       nextStep.location,
-      routeCoordinates
+      route.coordinates
     );
 
     const distanceString = buildDistanceString(distance);
@@ -87,8 +85,10 @@ export default function NavigationPanel({
   }, [currentCoordinate, isNavigating, arrived, currentStepIndex]);
 
   useEffect(() => {
-    const currentStep = steps[currentStepIndex];
-    const nextStep = steps[currentStepIndex + 1];
+    if(!route) return;
+
+    const currentStep = route.steps[currentStepIndex];
+    const nextStep = route.steps[currentStepIndex + 1];
 
     if (!isNavigating || !currentStep) return;
 
@@ -104,7 +104,7 @@ export default function NavigationPanel({
       distance = calculatePathDistance(
         currentCoordinate,
         nextStep.location,
-        routeCoordinates
+        route.coordinates
       );
     }
 
@@ -166,14 +166,21 @@ export default function NavigationPanel({
   };
 
 
-  if (!selectedPlace) return null;
-
-  const nextStep = steps[currentStepIndex + 1];
-  console.log(nextStep)
+  if (!selectedPlace || !route) return null;
+  const nextStep = route.steps[currentStepIndex + 1];
   const icon = nextStep ? getStepIcon(nextStep) : null;
 
   return (
     <View style={[styles.container]}>
+      {!isNavigating && route && (
+        <View style={styles.summaryBox}>
+          <Text style={styles.summaryText}>
+            🛣 {formatDistance(route.distance)} · ⏱ {formatDuration(route.duration)}
+            {route.elevationGain != null && ` · ⛰ +${Math.round(route.elevationGain)} m`}
+          </Text>
+        </View>
+      )}
+
       {isNavigating ? (
         <>
           <View style={styles.instructionBox}>
@@ -261,5 +268,21 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 50,
     marginBottom: 10,
+  },
+  summaryBox: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+    alignItems: "center",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+  },
+  summaryText: {
+    fontSize: 14,
+    color: "#333",
   },
 });
