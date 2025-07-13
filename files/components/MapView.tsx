@@ -9,6 +9,7 @@ type Props = {
   currentCoordinate: LatLng;
   endPlace: Place | null;
   startPlace: Place | null;
+  waypoints: Place[];
   routeCoordinates: Array<LatLng>;
   routes: Array<Route>;
   selectedRoute: Route;
@@ -21,6 +22,7 @@ export default function MapViewComponent({
                                            currentCoordinate,
                                            startPlace,
                                            endPlace,
+                                           waypoints,
                                            selectedRoute,
                                            routes,
                                            onMapPress,
@@ -68,6 +70,19 @@ export default function MapViewComponent({
         </MapboxGL.PointAnnotation>
       )}
 
+      {waypoints.map((waypoint, index) => (
+        <MapboxGL.PointAnnotation
+          id={'waypoint' + index.toString()}
+          key={index.toString()}
+          coordinate={waypoint.center}
+        >
+          <View style={styles.markerContainer}>
+            <View style={styles.waypointMarker} />
+          </View>
+          <MapboxGL.Callout title={waypoint.name} />
+        </MapboxGL.PointAnnotation>
+      ))}
+
       {routes.map((route, index) => (
         <MapboxGL.ShapeSource
           key={`route-${index}`}
@@ -102,6 +117,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 30,
     height: 30,
+  },
+  waypointMarker: {
+    width: 15,
+    height: 15,
+    borderRadius: 7.5,
+    backgroundColor: "green",
+    borderColor: "white",
+    borderWidth: 2,
   },
   marker: {
     width: 15,

@@ -228,6 +228,7 @@ export default function Index() {
         currentCoordinate={currentCoordinate}
         startPlace={startPlace}
         endPlace={endPlace}
+        waypoints={waypoints}
         routes={routes}
         selectedRoute={selectedRoute}
         onMapPress={handleMapPress}
