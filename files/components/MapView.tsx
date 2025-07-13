@@ -14,6 +14,7 @@ type Props = {
   selectedRoute: Route;
   onMapPress: (event: any) => void;
   mockLocation: boolean;
+  isNavigating: boolean;
 };
 
 export default function MapViewComponent({
@@ -24,6 +25,7 @@ export default function MapViewComponent({
                                            routes,
                                            onMapPress,
                                            mockLocation,
+                                           isNavigating,
                                          }: Props) {
   const cameraCenter = endPlace?.center ?? currentCoordinate;
 

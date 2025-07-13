@@ -7,7 +7,6 @@ import {
 import MapboxGL from "@rnmapbox/maps";
 import { MAPBOX_ACCESS_TOKEN } from '@env';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import SearchBar from "@/files/components/SearchBar";
 import useCurrentLocation from "@/files/hooks/UseCurrentLocation";
 import {
   calculatePathDistance,
@@ -21,7 +20,7 @@ import { Accuracy } from "expo-location";
 import * as Speech from 'expo-speech';
 import {useDirections} from "@/files/hooks/useDirections";
 import {useGeocoding} from "@/files/hooks/useGeocoding";
-import StartEndSearch from "@/files/components/StartEndSearch";
+import StartEndSearch, {SearchMode} from "@/files/components/StartEndSearch";
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
@@ -30,6 +29,7 @@ export default function Index() {
   const [suggestions, setSuggestions] = useState([]);
   const [startPlace, setStartPlace] = useState<Place|null>(null);
   const [endPlace, setEndPlace] = useState<Place|null>(null);
+  const [waypoints, setWaypoints] = useState<Place[]>([]);
   const currentCoordinateRef = useRef<LatLng | null>(null);
   const [routeCoordinates, setRouteCoordinates] = useState<Array<LatLng>>([]);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -38,7 +38,7 @@ export default function Index() {
   const [steps, setSteps] = useState<any[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [currentCoordinate, setCurrentCoordinate] = useCurrentLocation();
-  const [pickingFromMap, setPickingFromMap] = useState<"start" | "end" | null>("end");
+  const [searchMode, setSearchMode] = useState<SearchMode>({type: "end"});
   const { routes, getDirections, isLoadingDirections, setSelectedRoute, selectedRoute } = useDirections();
   const { searchResults, search, isLoadingGeocoding, fetchSearchResults } = useGeocoding();
 
@@ -63,18 +63,32 @@ export default function Index() {
   }, [currentStepIndex, currentCoordinate]);
 
   useEffect(() => {
+    console.log("getDirections", startPlace, endPlace)
+
     if (!isNavigating && startPlace && endPlace) {
       console.log("getDirections", startPlace, endPlace)
-      getDirections(startPlace.center, endPlace.center);
+      getDirections([startPlace.center, ...waypoints.map(place => place.center), endPlace.center]);
     }
-  }, [startPlace, endPlace]);
+  }, [startPlace, endPlace, waypoints]);
 
-  const handleSuggestionPress = (center: LatLng, name: string) => {
-    if(!isNavigating) {
-      setQuery(name);
-      setSuggestions([]);
-      setEndPlace({center, name});
-    }
+  const handleWaypointAdded = (place:Place) => {
+    console.log("handleWaypointAdded", place)
+    setWaypoints((prev) => [...prev, place]);
+  };
+
+  const handleWaypointRemoved = (index:number) => {
+    console.log("handleWaypointRemoved", index)
+    setWaypoints((prev) =>
+      prev.filter((_, waypointIndex) => index != waypointIndex)
+    );
+  };
+
+  const handleWaypointChanged = (place:Place, index:number) => {
+    console.log("handleWaypointChanged", place)
+    setWaypoints((prev) => {
+      prev[index] = place;
+      return prev;
+    });
   };
 
   const handleStartPlaceSelected = (place:Place) => {
@@ -93,7 +107,16 @@ export default function Index() {
     const coords = event.geometry.coordinates as LatLng;
 
     if(!isNavigating){
-      if(pickingFromMap == "start"){
+      console.log("handleMapPress", searchMode)
+      if(searchMode?.type == "waypoint"){
+        if(searchMode?.index < waypoints.length){
+          handleWaypointChanged({ center: coords }, searchMode?.index);
+        }
+        else{
+          handleWaypointAdded({ center: coords });
+        }
+      }
+      else if(searchMode?.type == "start"){
         setStartPlace({ center: coords });
       }
       else{
@@ -208,6 +231,7 @@ export default function Index() {
         routes={routes}
         selectedRoute={selectedRoute}
         onMapPress={handleMapPress}
+        isNavigating={isNavigating}
       />
       <SafeAreaView
         edges={["top", "bottom", "left", "right"]}
@@ -218,8 +242,12 @@ export default function Index() {
           <View style={{ flex: 1, justifyContent: "flex-start" }} pointerEvents="box-none">
             <StartEndSearch startPlace={startPlace}
                             endPlace={endPlace}
-                            pickingFromMap={pickingFromMap}
-                            setPickingFromMap={setPickingFromMap}
+                            waypoints={waypoints}
+                            onAddWaypoint={handleWaypointAdded}
+                            onRemoveWaypoint={handleWaypointRemoved}
+                            onChangeWaypoint={handleWaypointChanged}
+                            searchMode={searchMode}
+                            setSearchMode={setSearchMode}
                             onSelectStart={handleStartPlaceSelected}
                             onSelectEnd={handleEndPlaceSelected}
                             onSwap={() => {
@@ -229,10 +257,10 @@ export default function Index() {
                             onSearch={(query) => fetchSearchResults(query, currentCoordinateRef.current)}>
 
             </StartEndSearch>
-            {pickingFromMap && (
+            {searchMode && (
               <View style={styles.mapHint}>
                 <Text>
-                  Tap the map to select {pickingFromMap === "start" ? "starting point" : "destination"}
+                  Tap the map to select {searchMode === "start" ? "starting point" : "destination"}
                 </Text>
               </View>
             )}

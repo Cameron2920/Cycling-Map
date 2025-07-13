@@ -3,13 +3,19 @@ import { View, TextInput, TouchableOpacity, Text, StyleSheet, Modal, FlatList } 
 import { Ionicons } from "@expo/vector-icons";
 import { Place } from "@/files/lib/MapBox";
 
+export type SearchMode = { type: "waypoint" | "start" | "end", index?: number };
+
 type Props = {
   startPlace: Place | null;
   endPlace: Place | null;
+  waypoints: Place[];
   onSelectStart: (place: Place) => void;
   onSelectEnd: (place: Place) => void;
-  setPickingFromMap: (value: string) => void;
-  pickingFromMap:string;
+  onAddWaypoint: (place: Place) => void;
+  onRemoveWaypoint: (index: number) => void;
+  onChangeWaypoint: (place: Place, index: number) => void;
+  setSearchMode: (value: SearchMode | null) => void;
+  searchMode: SearchMode | null;
   onSwap: () => void;
   onSearch: (query: string) => Promise<Place[]>;
 };
@@ -17,14 +23,18 @@ type Props = {
 export default function StartEndSearch({
                                          startPlace,
                                          endPlace,
-                                         pickingFromMap,
-                                         setPickingFromMap,
+                                         waypoints,
+                                         searchMode,
+                                         setSearchMode,
                                          onSelectStart,
                                          onSelectEnd,
+                                         onAddWaypoint,
+                                         onRemoveWaypoint,
+                                         onChangeWaypoint,
                                          onSwap,
                                          onSearch,
                                        }: Props) {
-  const [searchMode, setSearchMode] = useState<"start" | "end" | null>(null);
+  const [expandSearchBar, setExpandSearchBar] = useState<boolean>(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Place[]>([]);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -59,20 +69,27 @@ export default function StartEndSearch({
   }, []);
 
   const handleSelect = (place: Place) => {
-    if (searchMode === "start") {
+    if (searchMode?.type === "start") {
       onSelectStart(place);
-    } else if (searchMode === "end") {
+    } else if (searchMode?.type === "end") {
       onSelectEnd(place);
+    } else if (searchMode?.type === "waypoint") {
+      if (searchMode?.index < waypoints.length) {
+        onChangeWaypoint(place, searchMode.index);
+      } else {
+        onAddWaypoint(place);
+      }
     }
-    setSearchMode(null);
+    setExpandSearchBar(false);
     setQuery("");
     setResults([]);
   };
 
   const handleChooseOnMap = () => {
     if (searchMode) {
-      setPickingFromMap(searchMode);
-      setSearchMode(null);
+      console.log("onChooseOnMap", searchMode);
+      setSearchMode(searchMode);
+      setExpandSearchBar(false);
       setQuery("");
       setResults([]);
     }
@@ -92,7 +109,10 @@ export default function StartEndSearch({
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.inputBox} onPress={() => setSearchMode("start")}>
+      <TouchableOpacity style={styles.inputBox} onPress={() => {
+        setSearchMode({type: "start"})
+        setExpandSearchBar(true);
+      }}>
         <Text style={styles.inputText}>{placeLabel(startPlace) || "Choose starting point"}</Text>
       </TouchableOpacity>
 
@@ -100,18 +120,47 @@ export default function StartEndSearch({
         <Ionicons name="swap-vertical" size={20} color="#007AFF" />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.inputBox} onPress={() => setSearchMode("end")}>
+      {waypoints.map((place, index) => (
+        <TouchableOpacity
+          key={index}
+          style={styles.inputBox}
+          onPress={() => {
+            setSearchMode({ type: "waypoint", index });
+            setExpandSearchBar(true);
+          }}
+          onLongPress={() => onRemoveWaypoint(index)}
+        >
+          <Text style={styles.inputText}>
+            {placeLabel(place) || `Waypoint ${index + 1}`} (long press to remove)
+          </Text>
+        </TouchableOpacity>
+      ))}
+
+      <TouchableOpacity
+        style={[styles.inputBox, { borderColor: "#007AFF" }]}
+        onPress={() => {
+          setSearchMode({type: "waypoint", index: waypoints.length})
+          setExpandSearchBar(true);
+        }}
+      >
+        <Text style={[styles.inputText, { color: "#007AFF" }]}>+ Add Waypoint</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.inputBox} onPress={() => {
+        setSearchMode({type: "end"});
+        setExpandSearchBar(true);
+      }}>
         <Text style={styles.inputText}>{placeLabel(endPlace) || "Choose destination"}</Text>
       </TouchableOpacity>
 
-      <Modal visible={searchMode !== null} animationType="slide">
+      <Modal visible={expandSearchBar} animationType="slide">
         <View style={styles.modalContainer}>
           <TextInput
             ref={inputRef}
             style={styles.modalInput}
             value={query}
             onChangeText={setQuery}
-            placeholder={`Search ${searchMode === "start" ? "start" : "destination"}...`}
+            placeholder={`Search ${searchMode?.type === "start" ? "start" : "destination"}...`}
           />
           <FlatList
             data={results}
@@ -127,7 +176,10 @@ export default function StartEndSearch({
               </TouchableOpacity>
             }
           />
-          <TouchableOpacity onPress={() => setSearchMode(null)} style={styles.cancelButton}>
+          <TouchableOpacity onPress={() => {
+            setSearchMode(null)
+            setExpandSearchBar(false);
+          }} style={styles.cancelButton}>
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
         </View>

@@ -27,7 +27,7 @@ export function useDirections() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<any>(null);
 
-  const getDirectionsWithMapbox = async (start: LatLng, end: LatLng) => {
+  const getDirectionsWithMapbox = async (points: LatLng[]) => {
     setLoading(true);
     setError(null);
 
@@ -39,14 +39,9 @@ export function useDirections() {
           steps: true,
           overview: "full",
           alternatives: true,
-          waypoints: [
-            {
-              coordinates: start,
-            },
-            {
-              coordinates: end,
-            },
-          ],
+          waypoints: points.map((point) => ({
+            coordinates: point,
+          }))
         })
         .send();
       const parsedRoutes = response.body.routes.map((route: any) => ({
@@ -163,9 +158,9 @@ export function useDirections() {
     }
   };
 
-  const getDirections = async (start: LatLng, end: LatLng) => {
+  const getDirections = async (points: LatLng[]) => {
     // return getDirectionsWithGrasshopper(start, end);
-    return getDirectionsWithMapbox(start, end);
+    return getDirectionsWithMapbox(points);
   };
   return { routes, getDirections, isLoadingDirections: loading, directionsError: error, selectedRoute, setSelectedRoute };
 }
