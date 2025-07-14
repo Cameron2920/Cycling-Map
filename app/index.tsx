@@ -42,7 +42,7 @@ export default function Index() {
   const { routes, getDirections, isLoadingDirections, setSelectedRoute, selectedRoute } = useDirections();
   const { searchResults, search, isLoadingGeocoding, fetchSearchResults } = useGeocoding();
 
-  const mockLocation = true;
+  const mockLocation = __DEV__;
 
   useEffect(() => {
     currentCoordinateRef.current = currentCoordinate;
