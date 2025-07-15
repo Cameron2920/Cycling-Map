@@ -18,6 +18,7 @@ export default function useCurrentLocation() {
         return;
       };
       const userLocation = await Location.getCurrentPositionAsync({});
+      console.log("User location", userLocation);
       setLocation([
         userLocation.coords.longitude,
         userLocation.coords.latitude,

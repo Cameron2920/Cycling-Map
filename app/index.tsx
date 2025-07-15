@@ -2,7 +2,7 @@ import React, {useState, useEffect, useRef} from "react";
 import {
   View,
   StyleSheet,
-  Text,
+  Text, Alert,
 } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
 import { MAPBOX_ACCESS_TOKEN } from '@env';
@@ -21,6 +21,8 @@ import * as Speech from 'expo-speech';
 import {useDirections} from "@/files/hooks/useDirections";
 import {useGeocoding} from "@/files/hooks/useGeocoding";
 import StartEndSearch, {SearchMode} from "@/files/components/StartEndSearch";
+import { LOCATION_TASK_NAME } from "@/files/hooks/locationTask";
+import {setOnBackgroundLocationUpdate} from "@/files/hooks/locationTask";
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
@@ -31,6 +33,7 @@ export default function Index() {
   const [endPlace, setEndPlace] = useState<Place|null>(null);
   const [waypoints, setWaypoints] = useState<Place[]>([]);
   const currentCoordinateRef = useRef<LatLng | null>(null);
+  const currentStepIndexRef = useRef<number | null>(null);
   const [routeCoordinates, setRouteCoordinates] = useState<Array<LatLng>>([]);
   const [isNavigating, setIsNavigating] = useState(false);
   const [arrived, setArrived] = useState(false);
@@ -42,7 +45,47 @@ export default function Index() {
   const { routes, getDirections, isLoadingDirections, setSelectedRoute, selectedRoute } = useDirections();
   const { searchResults, search, isLoadingGeocoding, fetchSearchResults } = useGeocoding();
 
-  const mockLocation = __DEV__;
+  const mockLocation = false;
+
+  const startBackgroundLocationTracking = async () => {
+    const { status } = await Location.requestBackgroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert("Permission required", "Background location access is needed for navigation.");
+      return;
+    }
+
+    const isStarted = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+    console.log("startBackgroundLocationTracking", isStarted);
+    if (!isStarted) {
+      console.log("startBackgroundLocationTracking starting");
+
+      try{
+        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+          accuracy: Location.Accuracy.Highest,
+          distanceInterval: 1,
+          timeInterval: 1000,
+          showsBackgroundLocationIndicator: true,
+          foregroundService: {
+            notificationTitle: "Cycling Navigation",
+            notificationBody: "Your ride is being tracked in the background",
+            notificationColor: "#007AFF"
+          }
+        });
+      }
+      catch (error) {
+        console.error("startBackgroundLocationTracking error", error);
+      }
+      console.log("startBackgroundLocationTracking started");
+    }
+  };
+
+  const stopBackgroundLocationTracking = async () => {
+    const isStarted = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+    if (isStarted) {
+      console.log("stopBackgroundLocationTracking stopping");
+      await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    }
+  };
 
   useEffect(() => {
     currentCoordinateRef.current = currentCoordinate;
@@ -57,10 +100,30 @@ export default function Index() {
   }, [currentCoordinate]);
 
   useEffect(() => {
-    if (isNavigating && currentCoordinate) {
-      checkAdvanceStep(currentCoordinate, currentStepIndex);
+    currentStepIndexRef.current = currentStepIndex;
+  }, [currentStepIndex]);
+
+  useEffect(() => {
+    setOnBackgroundLocationUpdate(async (coords) => {
+      console.log("setOnBackgroundLocationUpdate", coords);
+      setCurrentCoordinate(coords);
+      checkAdvanceStep(coords, currentStepIndex);
+    });
+  }, [isNavigating]);
+
+  useEffect(() => {
+    if (isNavigating) {
+      startBackgroundLocationTracking();
     }
-  }, [currentStepIndex, currentCoordinate]);
+    else {
+      stopBackgroundLocationTracking();
+      setOnBackgroundLocationUpdate(null);
+    }
+
+    return () => {
+      stopBackgroundLocationTracking();
+    };
+  }, [isNavigating]);
 
   useEffect(() => {
     console.log("getDirections", startPlace, endPlace)
