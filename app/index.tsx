@@ -294,6 +294,7 @@ export default function Index() {
         waypoints={waypoints}
         routes={routes}
         selectedRoute={selectedRoute}
+        setSelectedRoute={setSelectedRoute}
         onMapPress={handleMapPress}
         isNavigating={isNavigating}
       />

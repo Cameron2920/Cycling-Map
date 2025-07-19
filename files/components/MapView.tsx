@@ -13,6 +13,7 @@ type Props = {
   routeCoordinates: Array<LatLng>;
   routes: Array<Route>;
   selectedRoute: Route;
+  setSelectedRoute: (Route: any) => void;
   onMapPress: (event: any) => void;
   mockLocation: boolean;
   isNavigating: boolean;
@@ -24,6 +25,7 @@ export default function MapViewComponent({
                                            endPlace,
                                            waypoints,
                                            selectedRoute,
+                                           setSelectedRoute,
                                            routes,
                                            onMapPress,
                                            mockLocation,
@@ -94,7 +96,15 @@ export default function MapViewComponent({
               coordinates: route.coordinates,
             },
           }}
+          onPress={() => setSelectedRoute(route)}
         >
+          <MapboxGL.LineLayer
+            id={`routeLine-touch-${index}`}
+            style={{
+              lineColor: "transparent",
+              lineWidth: 20, // bigger hitbox
+            }}
+          />
           <MapboxGL.LineLayer
             id={`routeLine-${index}`}
             style={{
