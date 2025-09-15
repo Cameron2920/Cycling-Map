@@ -1,10 +1,11 @@
 // components/MapView.tsx
-import React, {useRef} from "react";
+import React, {useEffect, useRef} from "react";
 import { View, StyleSheet } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
 import {Route} from "@/files/hooks/useDirections";
-import {LatLng, Place} from "@/files/lib/MapBox";
+import {getBoundingBox, LatLng, Place} from "@/files/lib/MapBox";
 import {Gesture, GestureDetector} from "react-native-gesture-handler";
+import {RouteView} from "@/files/components/RouteView";
 
 type Props = {
   currentCoordinate: LatLng;
@@ -34,7 +35,7 @@ export default function MapViewComponent({
                                            mockLocation,
                                            isNavigating,
                                          }: Props) {
-  const cameraCenter = endPlace?.center ?? currentCoordinate;
+  const cameraRef = useRef<MapboxGL.Camera>(null);
   const mapRef = useRef(null);
 
   // Using a gesture detector because MapboxGL.MapView.onLongPress does not work on Android (as of 2025-09-14)
@@ -55,13 +56,45 @@ export default function MapViewComponent({
       }
     })
 
+  useEffect(() => {
+    if(cameraRef.current){
+      if (routes.length > 0) {
+        const bbox = getBoundingBox(routes);
+
+        if (bbox) {
+          cameraRef.current.fitBounds(
+            [bbox.minX, bbox.minY], // southwest
+            [bbox.maxX, bbox.maxY], // northeast
+            100, // padding
+            1000 // animation duration (ms)
+          );
+        }
+      }
+      else {
+        cameraRef.current.setCamera({
+          centerCoordinate: endPlace?.center ?? currentCoordinate,
+          zoomLevel: 14, // adjust default zoom
+          animationDuration: 1000,
+        });
+      }
+    }
+  }, [routes, endPlace]);
+
+  const sortRoutes = (routes, selectedRoute) => {
+    if (!selectedRoute) return routes;
+    return [
+      ...routes.filter((route) => route !== selectedRoute),
+      selectedRoute, // push selected one to end
+    ];
+  }
+
   return (
     <GestureDetector gesture={longPressGesture}>
       <View style={{ flex: 1 }} collapsable={false}>
         <MapboxGL.MapView style={StyleSheet.absoluteFill}
                           ref={mapRef}
                           onPress={onMapPress}>
-          <MapboxGL.Camera zoomLevel={13} centerCoordinate={cameraCenter} />
+          <MapboxGL.Camera zoomLevel={13} ref={cameraRef} />
           <MapboxGL.UserLocation visible={!mockLocation} />
           {mockLocation && (
             <MapboxGL.PointAnnotation
@@ -73,6 +106,49 @@ export default function MapViewComponent({
               </View>
             </MapboxGL.PointAnnotation>
           )}
+
+          {sortRoutes(routes, selectedRoute).map((route, index) => (
+            <MapboxGL.ShapeSource
+              key={`route-${index}`}
+              id={`routeSource-${index}`}
+              shape={{
+                type: "Feature",
+                geometry: {
+                  type: "LineString",
+                  coordinates: route.coordinates,
+                },
+              }}
+              onPress={() => setSelectedRoute(route)}
+            >
+              <MapboxGL.LineLayer
+                id={`routeLine-touch-${index}`}
+                style={{
+                  lineColor: "transparent",
+                  lineWidth: 20, // bigger hitbox
+                }}
+              />
+              <MapboxGL.LineLayer
+                id={`routeLine-outline-${index}`}
+                style={{
+                  lineColor: "#808080",
+                  lineWidth: route === selectedRoute ? 7 : 5,
+                  lineOpacity: 0.9,
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
+              />
+              <MapboxGL.LineLayer
+                id={`routeLine-${index}`}
+                style={{
+                  lineColor: route === selectedRoute ? "#007AFF" : "#A0A0A0",
+                  lineWidth: route === selectedRoute ? 5 : 3,
+                  lineOpacity: route === selectedRoute ? 1 : 0.7,
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
+              />
+            </MapboxGL.ShapeSource>
+          ))}
 
           {endPlace && (
             <MapboxGL.PointAnnotation
@@ -109,39 +185,6 @@ export default function MapViewComponent({
               </View>
               <MapboxGL.Callout title={waypoint.name} />
             </MapboxGL.PointAnnotation>
-          ))}
-
-          {routes.map((route, index) => (
-            <MapboxGL.ShapeSource
-              key={`route-${index}`}
-              id={`routeSource-${index}`}
-              shape={{
-                type: "Feature",
-                geometry: {
-                  type: "LineString",
-                  coordinates: route.coordinates,
-                },
-              }}
-              onPress={() => setSelectedRoute(route)}
-            >
-              <MapboxGL.LineLayer
-                id={`routeLine-touch-${index}`}
-                style={{
-                  lineColor: "transparent",
-                  lineWidth: 20, // bigger hitbox
-                }}
-              />
-              <MapboxGL.LineLayer
-                id={`routeLine-${index}`}
-                style={{
-                  lineColor: route === selectedRoute ? "#007AFF" : "#A0A0A0", // main vs alternatives
-                  lineWidth: route === selectedRoute ? 5 : 3,
-                  lineOpacity: route === selectedRoute ? 1 : 0.6,
-                  lineCap: "round",
-                  lineJoin: "round",
-                }}
-              />
-            </MapboxGL.ShapeSource>
           ))}
         </MapboxGL.MapView>
       </View>

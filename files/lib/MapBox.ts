@@ -1,6 +1,7 @@
 import mbxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 import mbxDirections from '@mapbox/mapbox-sdk/services/directions';
 import { MAPBOX_ACCESS_TOKEN } from '@env';
+import {Route} from "@/files/hooks/useDirections";
 
 export const geocodingClient = mbxGeocoding({ accessToken: MAPBOX_ACCESS_TOKEN });
 export const directionsClient = mbxDirections({ accessToken: MAPBOX_ACCESS_TOKEN });
@@ -144,3 +145,20 @@ export function formatDuration(s: number) {
   const min = Math.round(s / 60);
   return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`;
 };
+
+export function getBoundingBox(routes:Route[]) {
+  if (!routes || routes.length === 0) return null;
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+  routes.forEach(route => {
+    route.coordinates.forEach(([lng, lat]) => {
+      if (lng < minX) minX = lng;
+      if (lat < minY) minY = lat;
+      if (lng > maxX) maxX = lng;
+      if (lat > maxY) maxY = lat;
+    });
+  });
+
+  return { minX, minY, maxX, maxY };
+}
