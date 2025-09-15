@@ -182,13 +182,38 @@ export default function Index() {
       else if(searchMode?.type == "start"){
         setStartPlace({ center: coords });
       }
-      else{
+      else if(searchMode?.type == "end"){
         setEndPlace({ center: coords });
       }
+      setSearchMode(null);
       setSuggestions([]);
     }
     else if(mockLocation){
       setCurrentCoordinate(coords);
+    }
+  }
+
+  const handleMapLongPress = (event) => {
+    const coords = event.geometry.coordinates as LatLng;
+
+    if(!isNavigating){
+      console.log("handleMapLongPress", searchMode)
+
+      if(searchMode?.type == "waypoint"){
+        if(searchMode?.index < waypoints.length){
+          handleWaypointChanged({ center: coords }, searchMode?.index);
+        }
+        else{
+          handleWaypointAdded({ center: coords });
+        }
+      }
+      else if(searchMode?.type == "start"){
+        setStartPlace({ center: coords });
+      }
+      else{
+        setEndPlace({ center: coords });
+      }
+      setSuggestions([]);
     }
   }
 
@@ -296,6 +321,7 @@ export default function Index() {
         selectedRoute={selectedRoute}
         setSelectedRoute={setSelectedRoute}
         onMapPress={handleMapPress}
+        onMapLongPress={handleMapLongPress}
         isNavigating={isNavigating}
       />
       <SafeAreaView
@@ -322,13 +348,6 @@ export default function Index() {
                             onSearch={(query) => fetchSearchResults(query, currentCoordinateRef.current)}>
 
             </StartEndSearch>
-            {searchMode && (
-              <View style={styles.mapHint}>
-                <Text>
-                  Tap the map to select {searchMode === "start" ? "starting point" : "destination"}
-                </Text>
-              </View>
-            )}
           </View>
         )}
         <View style={{ flex: 1, position: "relative" }}>

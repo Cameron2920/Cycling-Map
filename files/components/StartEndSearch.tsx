@@ -107,81 +107,114 @@ export default function StartEndSearch({
     return returnValue;
   }
 
+  const addWaypoint = () => {
+    setSearchMode({type: "waypoint", index: waypoints.length})
+    setExpandSearchBar(true);
+  }
+
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.inputBox} onPress={() => {
-        setSearchMode({type: "start"})
-        setExpandSearchBar(true);
-      }}>
-        <Text style={styles.inputText}>{placeLabel(startPlace) || "Choose starting point"}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.swapButton} onPress={onSwap}>
-        <Ionicons name="swap-vertical" size={20} color="#007AFF" />
-      </TouchableOpacity>
-
-      {waypoints.map((place, index) => (
+      {/* Start */}
+      <View style={styles.row}>
+        <Ionicons name="ellipse-outline" size={18} color="#007AFF" style={styles.iconLeft} />
         <TouchableOpacity
-          key={index}
-          style={styles.inputBox}
+          style={styles.searchField}
           onPress={() => {
-            setSearchMode({ type: "waypoint", index });
+            setSearchMode({ type: "start" });
             setExpandSearchBar(true);
           }}
-          onLongPress={() => onRemoveWaypoint(index)}
         >
-          <Text style={styles.inputText}>
-            {placeLabel(place) || `Waypoint ${index + 1}`} (long press to remove)
+          <Text style={styles.searchText}>
+            {placeLabel(startPlace) || "Choose starting point"}
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.iconButton} onPress={onSwap}>
+          <Ionicons name="swap-vertical" size={20} color="#007AFF" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Waypoints */}
+      {waypoints.map((place, index) => (
+        <View key={index} style={styles.row}>
+          <Ionicons name="stop-outline" size={18} color="#888" style={styles.iconLeft} />
+          <TouchableOpacity
+            style={styles.searchField}
+            onPress={() => {
+              setSearchMode({ type: "waypoint", index });
+              setExpandSearchBar(true);
+            }}
+          >
+            <Text style={styles.searchText}>
+              {placeLabel(place) || `Waypoint ${index + 1}`}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconButton} onPress={() => onRemoveWaypoint(index)}>
+            <Ionicons name="close" size={20} color="#FF3B30" />
+          </TouchableOpacity>
+        </View>
       ))}
 
-      <TouchableOpacity
-        style={[styles.inputBox, { borderColor: "#007AFF" }]}
-        onPress={() => {
-          setSearchMode({type: "waypoint", index: waypoints.length})
-          setExpandSearchBar(true);
-        }}
-      >
-        <Text style={[styles.inputText, { color: "#007AFF" }]}>+ Add Waypoint</Text>
-      </TouchableOpacity>
+      {/* Destination */}
+      <View style={styles.row}>
+        <Ionicons name="flag-outline" size={18} color="#FF3B30" style={styles.iconLeft} />
+        <TouchableOpacity
+          style={styles.searchField}
+          onPress={() => {
+            setSearchMode({ type: "end" });
+            setExpandSearchBar(true);
+          }}
+        >
+          <Text style={styles.searchText}>
+            {placeLabel(endPlace) || "Choose destination"}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.iconButton} onPress={addWaypoint}>
+          <Ionicons name="add-outline" size={20} color="#007AFF" />
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity style={styles.inputBox} onPress={() => {
-        setSearchMode({type: "end"});
-        setExpandSearchBar(true);
-      }}>
-        <Text style={styles.inputText}>{placeLabel(endPlace) || "Choose destination"}</Text>
-      </TouchableOpacity>
-
+      {/* Modal */}
       <Modal visible={expandSearchBar} animationType="slide">
         <View style={styles.modalContainer}>
-          <TextInput
-            ref={inputRef}
-            style={styles.modalInput}
-            value={query}
-            onChangeText={setQuery}
-            placeholder={`Search ${searchMode?.type === "start" ? "start" : "destination"}...`}
-          />
+          <View style={styles.searchHeader}>
+            <Ionicons name="search-outline" size={20} color="#888" style={{ marginRight: 8 }} />
+            <TextInput
+              ref={inputRef}
+              style={styles.modalInput}
+              value={query}
+              onChangeText={setQuery}
+              placeholder={`Search ${searchMode?.type}...`}
+            />
+            <TouchableOpacity
+              onPress={() => {
+                setSearchMode(null);
+                setExpandSearchBar(false);
+              }}
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+
           <FlatList
             data={results}
             keyExtractor={(item, index) => `${item.name}-${index}`}
             renderItem={({ item }) => (
-              <TouchableOpacity style={styles.resultItem} onPress={() => handleSelect(item)}>
+              <TouchableOpacity
+                style={styles.resultItem}
+                onPress={() => handleSelect(item)}
+              >
                 <Text>{item.name}</Text>
               </TouchableOpacity>
             )}
             ListFooterComponent={
-              <TouchableOpacity style={styles.chooseOnMap} onPress={handleChooseOnMap}>
+              <TouchableOpacity
+                style={styles.chooseOnMap}
+                onPress={handleChooseOnMap}
+              >
                 <Text style={styles.chooseOnMapText}>📍 Choose on map</Text>
               </TouchableOpacity>
             }
           />
-          <TouchableOpacity onPress={() => {
-            setSearchMode(null)
-            setExpandSearchBar(false);
-          }} style={styles.cancelButton}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
         </View>
       </Modal>
     </View>
@@ -190,53 +223,65 @@ export default function StartEndSearch({
 
 const styles = StyleSheet.create({
   container: {
-    padding: 10,
+    padding: 12,
     backgroundColor: "#fff",
     borderRadius: 12,
-    elevation: 5,
+    elevation: 4,
     margin: 10,
   },
-  inputBox: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    marginBottom: 10,
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
   },
-  inputText: {
+  iconLeft: {
+    marginRight: 8,
+  },
+  searchField: {
+    flex: 1,
+    backgroundColor: "#f2f2f2",
+    borderRadius: 25,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  searchText: {
     color: "#333",
   },
-  swapButton: {
-    alignSelf: "center",
-    marginVertical: 6,
+  iconButton: {
+    marginLeft: 8,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: "#f2f2f2",
   },
   modalContainer: {
     flex: 1,
-    padding: 20,
     backgroundColor: "#fff",
   },
+  searchHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderColor: "#eee",
+    backgroundColor: "#f2f2f2",
+  },
   modalInput: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    marginBottom: 10,
+    flex: 1,
+    fontSize: 16,
   },
   resultItem: {
-    padding: 12,
+    padding: 14,
     borderBottomWidth: 1,
     borderColor: "#eee",
   },
-  cancelButton: {
-    marginTop: 10,
-    alignSelf: "center",
-  },
   cancelText: {
     color: "#007AFF",
+    fontWeight: "600",
+    marginLeft: 10,
   },
   chooseOnMap: {
-    marginTop: 10,
+    margin: 16,
     padding: 12,
     backgroundColor: "#f0f0f0",
     borderRadius: 8,
@@ -247,3 +292,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+

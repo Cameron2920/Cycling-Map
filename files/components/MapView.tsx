@@ -1,9 +1,10 @@
 // components/MapView.tsx
-import React from "react";
+import React, {useRef} from "react";
 import { View, StyleSheet } from "react-native";
 import MapboxGL from "@rnmapbox/maps";
 import {Route} from "@/files/hooks/useDirections";
 import {LatLng, Place} from "@/files/lib/MapBox";
+import {Gesture, GestureDetector} from "react-native-gesture-handler";
 
 type Props = {
   currentCoordinate: LatLng;
@@ -15,6 +16,7 @@ type Props = {
   selectedRoute: Route;
   setSelectedRoute: (Route: any) => void;
   onMapPress: (event: any) => void;
+  onMapLongPress: (event: any) => void;
   mockLocation: boolean;
   isNavigating: boolean;
 };
@@ -28,96 +30,122 @@ export default function MapViewComponent({
                                            setSelectedRoute,
                                            routes,
                                            onMapPress,
+                                           onMapLongPress,
                                            mockLocation,
                                            isNavigating,
                                          }: Props) {
   const cameraCenter = endPlace?.center ?? currentCoordinate;
+  const mapRef = useRef(null);
+
+  // Using a gesture detector because MapboxGL.MapView.onLongPress does not work on Android (as of 2025-09-14)
+  const longPressGesture = Gesture.LongPress()
+    .runOnJS(true)
+    .onStart(async event => {
+      if (event) {
+        const mapPoint = await mapRef.current.getCoordinateFromView([event.x, event.y])
+        console.log("longPressGesture", event, mapPoint);
+
+        if (mapPoint) {
+          onMapLongPress({
+            geometry: {
+              coordinates: mapPoint,
+            }
+          })
+        }
+      }
+    })
 
   return (
-    <MapboxGL.MapView style={StyleSheet.absoluteFill} onPress={onMapPress}>
-      <MapboxGL.Camera zoomLevel={13} centerCoordinate={cameraCenter} />
-      <MapboxGL.UserLocation visible={!mockLocation} />
-      {mockLocation && (
-        <MapboxGL.PointAnnotation
-          id="mock-user"
-          coordinate={currentCoordinate}
-        >
-          <View style={styles.markerContainer}>
-            <View style={styles.userMarker} />
-          </View>
-        </MapboxGL.PointAnnotation>
-      )}
+    <GestureDetector gesture={longPressGesture}>
+      <View style={{ flex: 1 }} collapsable={false}>
+        <MapboxGL.MapView style={StyleSheet.absoluteFill}
+                          ref={mapRef}
+                          onPress={onMapPress}>
+          <MapboxGL.Camera zoomLevel={13} centerCoordinate={cameraCenter} />
+          <MapboxGL.UserLocation visible={!mockLocation} />
+          {mockLocation && (
+            <MapboxGL.PointAnnotation
+              id="mock-user"
+              coordinate={currentCoordinate}
+            >
+              <View style={styles.markerContainer}>
+                <View style={styles.userMarker} />
+              </View>
+            </MapboxGL.PointAnnotation>
+          )}
 
-      {endPlace && (
-        <MapboxGL.PointAnnotation
-          id="selectedPlace"
-          coordinate={endPlace.center}
-        >
-          <View style={styles.markerContainer}>
-            <View style={styles.marker} />
-          </View>
-          <MapboxGL.Callout title={endPlace.name} />
-        </MapboxGL.PointAnnotation>
-      )}
+          {endPlace && (
+            <MapboxGL.PointAnnotation
+              id="selectedPlace"
+              coordinate={endPlace.center}
+            >
+              <View style={styles.markerContainer}>
+                <View style={styles.marker} />
+              </View>
+              <MapboxGL.Callout title={endPlace.name} />
+            </MapboxGL.PointAnnotation>
+          )}
 
-      {startPlace && (
-        <MapboxGL.PointAnnotation
-          id="selectedPlace"
-          coordinate={startPlace.center}
-        >
-          <View style={styles.markerContainer}>
-            <View style={[styles.marker, {backgroundColor: "green"}]} />
-          </View>
-          <MapboxGL.Callout title={startPlace.name} />
-        </MapboxGL.PointAnnotation>
-      )}
+          {startPlace && (
+            <MapboxGL.PointAnnotation
+              id="selectedPlace"
+              coordinate={startPlace.center}
+            >
+              <View style={styles.markerContainer}>
+                <View style={[styles.marker, {backgroundColor: "green"}]} />
+              </View>
+              <MapboxGL.Callout title={startPlace.name} />
+            </MapboxGL.PointAnnotation>
+          )}
 
-      {waypoints.map((waypoint, index) => (
-        <MapboxGL.PointAnnotation
-          id={'waypoint' + index.toString()}
-          key={index.toString()}
-          coordinate={waypoint.center}
-        >
-          <View style={styles.markerContainer}>
-            <View style={styles.waypointMarker} />
-          </View>
-          <MapboxGL.Callout title={waypoint.name} />
-        </MapboxGL.PointAnnotation>
-      ))}
+          {waypoints.map((waypoint, index) => (
+            <MapboxGL.PointAnnotation
+              id={'waypoint' + index.toString()}
+              key={index.toString()}
+              coordinate={waypoint.center}
+            >
+              <View style={styles.markerContainer}>
+                <View style={styles.waypointMarker} />
+              </View>
+              <MapboxGL.Callout title={waypoint.name} />
+            </MapboxGL.PointAnnotation>
+          ))}
 
-      {routes.map((route, index) => (
-        <MapboxGL.ShapeSource
-          key={`route-${index}`}
-          id={`routeSource-${index}`}
-          shape={{
-            type: "Feature",
-            geometry: {
-              type: "LineString",
-              coordinates: route.coordinates,
-            },
-          }}
-          onPress={() => setSelectedRoute(route)}
-        >
-          <MapboxGL.LineLayer
-            id={`routeLine-touch-${index}`}
-            style={{
-              lineColor: "transparent",
-              lineWidth: 20, // bigger hitbox
-            }}
-          />
-          <MapboxGL.LineLayer
-            id={`routeLine-${index}`}
-            style={{
-              lineColor: route === selectedRoute ? "#007AFF" : "#A0A0A0", // main vs alternatives
-              lineWidth: route === selectedRoute ? 5 : 3,
-              lineOpacity: route === selectedRoute ? 1 : 0.6,
-              lineCap: "round",
-              lineJoin: "round",
-            }}
-          />
-        </MapboxGL.ShapeSource>
-      ))}
-    </MapboxGL.MapView>
+          {routes.map((route, index) => (
+            <MapboxGL.ShapeSource
+              key={`route-${index}`}
+              id={`routeSource-${index}`}
+              shape={{
+                type: "Feature",
+                geometry: {
+                  type: "LineString",
+                  coordinates: route.coordinates,
+                },
+              }}
+              onPress={() => setSelectedRoute(route)}
+            >
+              <MapboxGL.LineLayer
+                id={`routeLine-touch-${index}`}
+                style={{
+                  lineColor: "transparent",
+                  lineWidth: 20, // bigger hitbox
+                }}
+              />
+              <MapboxGL.LineLayer
+                id={`routeLine-${index}`}
+                style={{
+                  lineColor: route === selectedRoute ? "#007AFF" : "#A0A0A0", // main vs alternatives
+                  lineWidth: route === selectedRoute ? 5 : 3,
+                  lineOpacity: route === selectedRoute ? 1 : 0.6,
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
+              />
+            </MapboxGL.ShapeSource>
+          ))}
+        </MapboxGL.MapView>
+      </View>
+    </GestureDetector>
   );
 }
 
