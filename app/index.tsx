@@ -23,6 +23,7 @@ import {useGeocoding} from "@/files/hooks/useGeocoding";
 import StartEndSearch, {SearchMode} from "@/files/components/StartEndSearch";
 import { LOCATION_TASK_NAME } from "@/files/hooks/locationTask";
 import {setOnBackgroundLocationUpdate} from "@/files/hooks/locationTask";
+import {useReverseGeocoding} from "@/files/hooks/useReverseGeocoding";
 
 MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
 
@@ -44,6 +45,7 @@ export default function Index() {
   const [searchMode, setSearchMode] = useState<SearchMode>({type: "end"});
   const { routes, getDirections, isLoadingDirections, setSelectedRoute, selectedRoute } = useDirections();
   const { searchResults, search, isLoadingGeocoding, fetchSearchResults } = useGeocoding();
+  const { reverseGeocode } = useReverseGeocoding();
 
   const mockLocation = false;
 
@@ -166,24 +168,32 @@ export default function Index() {
     }
   };
 
-  const handleMapPress = (event) => {
+  const buildPlaceFromCoordinates = async (coordinates:LatLng):Promise<Place> => {
+    const feature = await reverseGeocode(coordinates);
+    return {
+      center: coordinates,
+      name: feature?.place_name,
+    }
+  }
+
+  const handleMapPress = async (event) => {
     const coords = event.geometry.coordinates as LatLng;
 
     if(!isNavigating){
       console.log("handleMapPress", searchMode)
       if(searchMode?.type == "waypoint"){
         if(searchMode?.index < waypoints.length){
-          handleWaypointChanged({ center: coords }, searchMode?.index);
+          handleWaypointChanged(await buildPlaceFromCoordinates(coords), searchMode?.index);
         }
         else{
-          handleWaypointAdded({ center: coords });
+          handleWaypointAdded(await buildPlaceFromCoordinates(coords));
         }
       }
       else if(searchMode?.type == "start"){
-        setStartPlace({ center: coords });
+        setStartPlace(await buildPlaceFromCoordinates(coords));
       }
       else if(searchMode?.type == "end"){
-        setEndPlace({ center: coords });
+        setEndPlace(await buildPlaceFromCoordinates(coords));
       }
       setSearchMode(null);
       setSuggestions([]);
@@ -193,7 +203,7 @@ export default function Index() {
     }
   }
 
-  const handleMapLongPress = (event) => {
+  const handleMapLongPress = async (event) => {
     const coords = event.geometry.coordinates as LatLng;
 
     if(!isNavigating){
@@ -201,17 +211,17 @@ export default function Index() {
 
       if(searchMode?.type == "waypoint"){
         if(searchMode?.index < waypoints.length){
-          handleWaypointChanged({ center: coords }, searchMode?.index);
+          handleWaypointChanged(await buildPlaceFromCoordinates(coords), searchMode?.index);
         }
         else{
-          handleWaypointAdded({ center: coords });
+          handleWaypointAdded(await buildPlaceFromCoordinates(coords));
         }
       }
       else if(searchMode?.type == "start"){
-        setStartPlace({ center: coords });
+        setStartPlace(await buildPlaceFromCoordinates(coords));
       }
       else{
-        setEndPlace({ center: coords });
+        setEndPlace(await buildPlaceFromCoordinates(coords));
       }
       setSuggestions([]);
     }
