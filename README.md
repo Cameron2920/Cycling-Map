@@ -1,4 +1,4 @@
-# 🚴‍♂️ Cycling Navigation App
+# 🚴‍♂️ CycleMap
 
 A React Native app built with [Expo Router](https://expo.github.io/router/) and [Mapbox](https://www.mapbox.com/) that helps cyclists plan and follow routes.  
 
