@@ -1,50 +1,33 @@
-# Welcome to your Expo app 👋
+# 🚴‍♂️ Cycling Navigation App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native app built with [Expo Router](https://expo.github.io/router/) and [Mapbox](https://www.mapbox.com/) that helps cyclists plan and follow routes.  
 
-## Get started
+---
 
-1. Install dependencies
+## ✨ Features
 
-   ```bash
-   npm install
-   ```
+- 🗺️ **Interactive Map** – Browse routes on a Mapbox-powered map.
+- 📍 **Route Planning** – Search for start and end locations with geocoding.
+- 🔊 **Turn-by-Turn Navigation** – Spoken instructions and vibration alerts for each step.
+- 📏 **Distance to Next Turn** – Real-time distance updates while navigating.
+- 🔋 **Background Navigation** – Keeps tracking your ride even when the app is in the background.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 📸 Screenshots
 
-In the output, you'll find options to open the app in a
+| Route Planning                                        | Navigation                                             | Search                                         |
+|-------------------------------------------------------|--------------------------------------------------------|------------------------------------------------|
+| ![Route Planning Screenshot](./screenshots/route.png) | ![Navigation Screenshot](./screenshots/navigation.png) | ![Search Screenshot](./screenshots/search.png) |
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Roadmap
+- Offline support
+- Custom route planner to replace mapbox API
 
-## Get a fresh project
+---
 
-When you're ready, run:
+## 🚀 Getting Started
 
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+This repo contains an expo app in the frontend directory. The backend is directory will be a custom route planning API.
